@@ -6,15 +6,26 @@ class OrdemServicoModelo {
   final String nomeSegurado;
   final String status;
 
+  // --- NOVOS CAMPOS PARA DETALHES DO SEGURADO ---
+  final String? seguradora;
+  final String? telefoneSegurado;
+  final String endereco;
+  final String numeroResidencia;
+  final String? complemento;
+  final String cidade;
+  final String? servicoExecutar;
+
+  // --- DATAS E HORÁRIOS ---
   final DateTime? janelaInicioAgendada;
   final DateTime? janelaFimAgendada;
   final DateTime? horarioChegadaReal;
   final DateTime? horarioSaidaReal;
 
+  // --- GEOLOCALIZAÇÃO ---
   final double? latitudeLocal;
   final double? longitudeLocal;
 
-  // Campos para Fotos (Essencial para o MVP)
+  // --- FOTOS (ESSENCIAL PARA O MVP) ---
   final List<String> fotosAntes;
   final List<String> fotosDepois;
 
@@ -25,6 +36,13 @@ class OrdemServicoModelo {
     required this.numeroAssistencia,
     required this.nomeSegurado,
     required this.status,
+    this.seguradora,
+    this.telefoneSegurado,
+    required this.endereco,
+    required this.numeroResidencia,
+    this.complemento,
+    required this.cidade,
+    this.servicoExecutar,
     this.janelaInicioAgendada,
     this.janelaFimAgendada,
     this.horarioChegadaReal,
@@ -43,6 +61,15 @@ class OrdemServicoModelo {
       numeroAssistencia: mapa['numero_assistencia']?.toString() ?? '',
       nomeSegurado: mapa['nome_segurado']?.toString() ?? '',
       status: mapa['status']?.toString() ?? 'pendente',
+      
+      // Novos campos com tratamento de nulos
+      seguradora: mapa['seguradora']?.toString(),
+      telefoneSegurado: mapa['telefone_segurado']?.toString(),
+      endereco: mapa['endereco']?.toString() ?? 'Endereço não informado',
+      numeroResidencia: mapa['numero_residencia']?.toString() ?? 'S/N',
+      complemento: mapa['complemento']?.toString(),
+      cidade: mapa['cidade']?.toString() ?? '',
+      servicoExecutar: mapa['servico_executar']?.toString(),
       
       janelaInicioAgendada: mapa['janela_inicio_agendada'] != null
           ? DateTime.tryParse(mapa['janela_inicio_agendada'].toString())
@@ -68,7 +95,6 @@ class OrdemServicoModelo {
           ? double.tryParse(mapa['longitude_local'].toString())
           : null,
 
-      // Tratamento seguro de listas vindas do banco
       fotosAntes: mapa['fotos_antes'] != null 
           ? List<String>.from(mapa['fotos_antes']) 
           : const [],
@@ -86,6 +112,13 @@ class OrdemServicoModelo {
       'numero_assistencia': numeroAssistencia,
       'nome_segurado': nomeSegurado,
       'status': status,
+      'seguradora': seguradora,
+      'telefone_segurado': telefoneSegurado,
+      'endereco': endereco,
+      'numero_residencia': numeroResidencia,
+      'complemento': complemento,
+      'cidade': cidade,
+      'servico_executar': servicoExecutar,
       'janela_inicio_agendada': janelaInicioAgendada?.toIso8601String(),
       'janela_fim_agendada': janelaFimAgendada?.toIso8601String(),
       'horario_chegada_real': horarioChegadaReal?.toIso8601String(),
