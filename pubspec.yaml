@@ -1,8 +1,6 @@
 name: basetec_os
 description: "A new Flutter project."
-
 publish_to: 'none' 
-
 version: 1.0.0+1
 
 environment:
@@ -10,6 +8,9 @@ environment:
 
 dependencies:
   flutter:
+    sdk: flutter
+  # Adicionado para suporte a localização (Calendário em PT-BR)
+  flutter_localizations:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
@@ -27,15 +28,15 @@ dependencies:
   printing: ^5.14.3
   signature: ^6.3.0
   native_device_orientation: ^2.1.0
+  flutter_screenutil: ^5.9.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
-
 flutter:
-
   uses-material-design: true
 
+  assets:
+    - assets/images/

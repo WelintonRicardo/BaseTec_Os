@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../controle/controle_os_cubit.dart';
-import '../modelos/ordem_servico_modelo.dart';
-import '../apresentacao/widgets/card_os_widget.dart'; // Nosso componente novo
-import 'tela_detalhes_os.dart';
+import '../../controle/controle_os_cubit.dart';
+import '../../modelos/ordem_servico_modelo.dart';
+import '../widgets/card_os_widget.dart'; // Nosso componente novo
+import '../tela_detalhes_os.dart';
 
 class TelaListaOS extends StatelessWidget {
   const TelaListaOS({super.key});

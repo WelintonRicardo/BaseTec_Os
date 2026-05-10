@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart'; // Para ligar e abrir mapa
 import '../controle/controle_os_cubit.dart';
 import '../modelos/ordem_servico_modelo.dart';
+import '../apresentacao/widgets/modal_assinatura_widget.dart';
 
 class TelaDetalhesOS extends StatelessWidget {
   final OrdemServicoModelo os;
@@ -204,4 +205,18 @@ class TelaDetalhesOS extends StatelessWidget {
   void _executarCheckIn(BuildContext context) {
     context.read<ControleOSCubit>().realizarCheckIn(os.id);
   }
+
+  void _finalizarAtendimento(BuildContext context) async {
+  final resultado = await Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ModalAssinaturaWidget()),
+  );
+
+  if (resultado != null) {
+    // Aqui você tem resultado['nome'] e resultado['imagem'] (Uint8List)
+    // Agora é só passar para o PDF Service e salvar no Supabase!
+    print("Nome do recebedor: ${resultado['nome']}");
+  }
+}
+
 }
