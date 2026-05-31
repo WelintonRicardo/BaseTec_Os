@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/painel_resumo_widget.dart';
 import '../../../../compartilhado/tema_cores.dart';
+import 'package:basetec_os/funcionalidades/cadastro/apresentacao/telas/tela_cadastro_os.dart';
 
 class TelaAdmin extends StatelessWidget {
   const TelaAdmin({super.key});
@@ -16,7 +17,6 @@ class TelaAdmin extends StatelessWidget {
       ),
       body: Row(
         children: [
-          // LADO ESQUERDO: Calendário e Técnicos
           Expanded(
             flex: 3,
             child: SingleChildScrollView(
@@ -30,7 +30,6 @@ class TelaAdmin extends StatelessWidget {
               ),
             ),
           ),
-          // LADO DIREITO: Painel Central e O.S do Dia
           Expanded(
             flex: 7,
             child: Padding(
@@ -40,7 +39,10 @@ class TelaAdmin extends StatelessWidget {
                 children: [
                   const PainelResumoWidget(),
                   const SizedBox(height: 30),
-                  const Text("Ordens de Serviço do Dia", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Ordens de Serviço do Dia",
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 20),
                   Expanded(child: _buildListaOSDia()),
                 ],
@@ -50,7 +52,12 @@ class TelaAdmin extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => TelaCadastroOS()),
+          );
+        },
         backgroundColor: AppCores.primaria,
         icon: const Icon(Icons.add),
         label: const Text("Nova O.S"),
@@ -121,4 +128,3 @@ class TelaAdmin extends StatelessWidget {
     );
   }
 }
-  
