@@ -23,8 +23,7 @@ class RepositorioOS {
                 try {
                   return OrdemServicoModelo.fromMap(mapa);
                 } catch (e) {
-                  print('ERRO AO CONVERTER O.S: $e');
-                  print('DADOS RECEBIDOS: $mapa');
+            
                   rethrow;
                 }
               }).toList(),

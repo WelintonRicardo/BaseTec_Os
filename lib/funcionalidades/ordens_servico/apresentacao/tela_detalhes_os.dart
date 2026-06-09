@@ -1,222 +1,817 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart'; // Para ligar e abrir mapa
-import '../controle/controle_os_cubit.dart';
-import '../modelos/ordem_servico_modelo.dart';
-import '../apresentacao/widgets/modal_assinatura_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class TelaDetalhesOS extends StatelessWidget {
-  final OrdemServicoModelo os;
+import '../../../../compartilhado/tema_cores.dart';
 
-  const TelaDetalhesOS({super.key, required this.os});
+class TecnicoOSDetalhes extends StatelessWidget {
+  final Map<String, dynamic> os;
 
-  // Função para abrir o Google Maps/Waze
-  Future<void> _abrirMapa() async {
-    final endereco = "${os.endereco}, ${os.numeroResidencia}, ${os.cidade}";
-    final url = Uri.parse("https://google.com");
-    if (await canLaunchUrl(url)) await launchUrl(url);
+  const TecnicoOSDetalhes({
+    super.key,
+    required this.os,
+  });
+
+  // =========================================================
+  // FORMATAR HORÁRIO
+  // =========================================================
+
+  String formatarHorario(dynamic data) {
+    if (data == null) {
+      return '--:--';
+    }
+
+    try {
+      final dt = DateTime.parse(data.toString());
+
+      final hora =
+          dt.hour.toString().padLeft(2, '0');
+
+      final minuto =
+          dt.minute.toString().padLeft(2, '0');
+
+      return '$hora:$minuto';
+    } catch (e) {
+      return '--:--';
+    }
   }
 
-  // Função para ligar para o cliente
-  Future<void> _ligarCliente() async {
-    final url = Uri.parse("tel:${os.telefoneSegurado}"); // Certifique-se que o modelo tem esse campo
-    if (await canLaunchUrl(url)) await launchUrl(url);
+  // =========================================================
+  // ABRIR MAPA
+  // =========================================================
+
+  Future<void> _abrirMapa(String endereco) async {
+    final urlMaps = Uri.encodeFull(
+      "https://www.google.com/maps/search/?api=1&query=$endereco",
+    );
+
+    final urlWaze = Uri.encodeFull(
+      "https://waze.com/ul?q=$endereco",
+    );
+
+    if (await canLaunchUrl(Uri.parse(urlWaze))) {
+      await launchUrl(
+        Uri.parse(urlWaze),
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      await launchUrl(
+        Uri.parse(urlMaps),
+        mode: LaunchMode.externalApplication,
+      );
+    }
   }
+
+  // =========================================================
+  // LIGAR CLIENTE
+  // =========================================================
+
+  Future<void> _ligarCliente(String telefone) async {
+    final url = Uri.parse("tel:$telefone");
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
+  }
+
+  // =========================================================
+  // WHATSAPP
+  // =========================================================
+
+  Future<void> _abrirWhatsApp(String telefone) async {
+    final url = Uri.parse(
+      "https://wa.me/$telefone",
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
+
+  // =========================================================
+  // MINI CAMPO
+  // =========================================================
+
+  Widget _miniCampo(
+    String titulo,
+    String valor,
+  ) {
+    return Container(
+      constraints: const BoxConstraints(
+        minWidth: 120,
+        maxWidth: 220,
+      ),
+
+      padding: const EdgeInsets.all(12),
+
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.15),
+
+        borderRadius: BorderRadius.circular(12),
+      ),
+
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+
+        children: [
+          Text(
+            titulo,
+
+            style: const TextStyle(
+              color: AppCores.primaria,
+
+              fontWeight: FontWeight.bold,
+
+              fontSize: 12,
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            valor,
+
+            style: const TextStyle(
+              color: AppCores.textoBranco,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================
+  // TAG INFO
+  // =========================================================
+
+  Widget _tagInfo(
+    IconData icon,
+    String texto,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.18),
+
+        borderRadius: BorderRadius.circular(30),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(
+            icon,
+
+            size: 16,
+
+            color: AppCores.primaria,
+          ),
+
+          const SizedBox(width: 6),
+
+          Text(
+            texto,
+
+            style: const TextStyle(
+              color: AppCores.textoBranco,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================
+  // BOTÃO AÇÃO
+  // =========================================================
+
+  Widget _botaoAcao({
+    required IconData icon,
+    required String titulo,
+    required Color cor,
+    required VoidCallback? onTap,
+  }) {
+    return SizedBox(
+      width: 160,
+
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: cor,
+
+          minimumSize: const Size(
+            160,
+            50,
+          ),
+        ),
+
+        onPressed: onTap,
+
+        icon: Icon(
+          icon,
+          color: Colors.white,
+        ),
+
+        label: Text(
+          titulo,
+
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================
+  // BUILD
+  // =========================================================
 
   @override
   Widget build(BuildContext context) {
-    final String horaInicio = os.janelaInicioAgendada?.hour.toString().padLeft(2, '0') ?? "00";
-    final String horaFim = os.janelaFimAgendada?.hour.toString().padLeft(2, '0') ?? "00";
+
+
+    final numeroOS =
+        os['numero_os']?.toString() ??
+            '---';
+
+    final segurado =
+        os['nome_segurado']
+                ?.toString() ??
+            'Não informado';
+
+    final seguradora =
+        os['seguradora']
+                ?.toString() ??
+            'Não informado';
+
+    final tipoServico =
+        os['tipo_servico']
+                ?.toString() ??
+            'Não informado';
+
+    final status =
+        os['status']?.toString() ??
+            'Não informado';
+
+    final telefone =
+        os['telefone']
+                ?.toString() ??
+            '';
+
+    final cep =
+        os['cep']?.toString() ??
+            'Não informado';
+
+    final cidade =
+        os['cidade']
+                ?.toString() ??
+            'Não informado';
+
+    final rua =
+        os['rua']?.toString() ??
+            'Não informado';
+
+    final numero =
+        os['numero']
+                ?.toString() ??
+            'S/N';
+
+    final complemento =
+        os['complemento']
+                ?.toString() ??
+            '';
+
+    final enderecoCompleto =
+        '$rua, $numero - $cidade';
+
+    final descricaoServico =
+        os['descricao_servico']
+                ?.toString() ??
+            'Sem descrição';
+
+    final horarioInicio =
+        formatarHorario(
+      os['janela_inicio_agendada'],
+    );
+
+    final horarioFim =
+        formatarHorario(
+      os['janela_fim_agendada'],
+    );
 
     return Scaffold(
+      backgroundColor:
+          AppCores.fundoEscuro,
+
       appBar: AppBar(
-        title: Text('O.S: ${os.numeroAssistencia}'),
-        centerTitle: true,
+        backgroundColor:
+            AppCores.cardEscuro,
+
+        title: Text(
+          "OS $numeroOS",
+
+          style: const TextStyle(
+            color:
+                AppCores.textoBranco,
+          ),
+        ),
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding:
+            const EdgeInsets.all(16),
+
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
           children: [
-            _buildCardStatus(),
-            const SizedBox(height: 24),
-            
-            // --- SEÇÃO: DADOS DO SEGURADO E SERVIÇO ---
-            _sessaoTitulo('DADOS DO ATENDIMENTO'),
-            const Divider(),
-            _infoLinha(Icons.business, "Seguradora", os.seguradora ?? "Não informada"),
-            _infoLinha(Icons.person, "Segurado", os.nomeSegurado),
-            _infoLinha(Icons.build, "Serviço", os.servicoExecutar ?? "Reparo Geral"),
-            
-            const SizedBox(height: 24),
-            
-            // --- SEÇÃO: LOCALIZAÇÃO ---
-            _sessaoTitulo('LOCALIZAÇÃO E HORÁRIO'),
-            const Divider(),
-            _infoLinha(Icons.location_on, "Endereço", "${os.endereco}, ${os.numeroResidencia}"),
-            if (os.complemento != null && os.complemento!.isNotEmpty)
-              _infoLinha(Icons.maps_home_work, "Complemento", os.complemento!),
-            _infoLinha(Icons.location_city, "Cidade", os.cidade),
-            _infoLinha(Icons.access_time, "Janela", "$horaInicio:00 às $horaFim:00"),
-            
-            const SizedBox(height: 32),
 
-            // --- BARRA DE AÇÕES RÁPIDAS ---
-            Row(
-              children: [
-                Expanded(child: _botaoAcaoRapida(Icons.phone, "Ligar", Colors.blue, _ligarCliente)),
-                const SizedBox(width: 10),
-                Expanded(child: _botaoAcaoRapida(Icons.map, "Rota", Colors.green, _abrirMapa)),
-                const SizedBox(width: 10),
-                Expanded(child: _botaoAcaoRapida(Icons.person_off, "Ausente", Colors.orange, () {})),
-              ],
-            ),
+            // =========================================================
+            // HEADER
+            // =========================================================
 
-            const SizedBox(height: 24),
-            
-            // --- LÓGICA DE STATUS / FLUXO ---
-            if (os.status == 'pendente')
-              _botaoPrincipal(
-                label: 'INICIAR SERVIÇO (CHECK-IN)',
-                cor: Colors.green,
-                icone: Icons.play_arrow,
-                onPressed: () => _executarCheckIn(context),
-              )
-            else if (os.status == 'em_atendimento')
-              Column(
+            Container(
+              width: double.infinity,
+
+              padding:
+                  const EdgeInsets.all(18),
+
+              decoration: BoxDecoration(
+                color:
+                    AppCores.cardEscuro,
+
+                borderRadius:
+                    BorderRadius.circular(
+                  20,
+                ),
+              ),
+
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment
+                        .start,
+
                 children: [
-                  _statusEmAndamento(),
-                  const SizedBox(height: 16),
-                  _botaoPrincipal(
-                    label: 'FOTOS E CHECKLIST',
-                    cor: Colors.blue,
-                    icone: Icons.camera_alt,
-                    onPressed: () {
-                      // Aqui navegamos para a tela de fotos que criamos antes
-                    },
+
+                  Row(
+                    children: [
+
+                      CircleAvatar(
+                        radius: 28,
+
+                        backgroundColor:
+                            AppCores
+                                .primaria
+                                .withOpacity(
+                          0.2,
+                        ),
+
+                        child: const Icon(
+                          Icons
+                              .assignment_rounded,
+
+                          color:
+                              AppCores
+                                  .primaria,
+
+                          size: 28,
+                        ),
+                      ),
+
+                      const SizedBox(
+                          width: 14),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+
+                          children: [
+
+                            Text(
+                              segurado,
+
+                              style:
+                                  const TextStyle(
+                                color: AppCores
+                                    .textoBranco,
+
+                                fontSize: 20,
+
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                            ),
+
+                            const SizedBox(
+                                height: 4),
+
+                            Text(
+                              "OS: $numeroOS",
+
+                              style:
+                                  const TextStyle(
+                                color: AppCores
+                                    .textoCinza,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                      height: 18),
+
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+
+                    children: [
+
+                      _tagInfo(
+                        Icons.access_time,
+                        "$horarioInicio às $horarioFim",
+                      ),
+
+                      _tagInfo(
+                        Icons.info_outline,
+                        status,
+                      ),
+
+                      _tagInfo(
+                        Icons.shield_outlined,
+                        seguradora,
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // =========================================================
+            // ENDEREÇO
+            // =========================================================
+
+            Container(
+              width: double.infinity,
+
+              padding:
+                  const EdgeInsets.all(16),
+
+              decoration: BoxDecoration(
+                color:
+                    AppCores.cardEscuro,
+
+                borderRadius:
+                    BorderRadius.circular(
+                  18,
+                ),
+              ),
+
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment
+                        .start,
+
+                children: [
+
+                  const Row(
+                    children: [
+
+                      Icon(
+                        Icons.location_on,
+
+                        color:
+                            AppCores
+                                .primaria,
+                      ),
+
+                      SizedBox(width: 8),
+
+                      Text(
+                        "Endereço",
+
+                        style: TextStyle(
+                          color:
+                              AppCores
+                                  .primaria,
+
+                          fontWeight:
+                              FontWeight
+                                  .bold,
+
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                      height: 16),
+
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+
+                    children: [
+
+                      _miniCampo(
+                        "Cidade",
+                        cidade,
+                      ),
+
+                      _miniCampo(
+                        "CEP",
+                        cep,
+                      ),
+
+                      _miniCampo(
+                        "Rua",
+                        rua,
+                      ),
+
+                      _miniCampo(
+                        "Número",
+                        numero,
+                      ),
+
+                      if (complemento
+                          .isNotEmpty)
+
+                        _miniCampo(
+                          "Complemento",
+                          complemento,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // =========================================================
+            // SERVIÇO
+            // =========================================================
+
+            Container(
+              width: double.infinity,
+
+              padding:
+                  const EdgeInsets.all(16),
+
+              decoration: BoxDecoration(
+                color:
+                    AppCores.cardEscuro,
+
+                borderRadius:
+                    BorderRadius.circular(
+                  18,
+                ),
+              ),
+
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment
+                        .start,
+
+                children: [
+
+                  const Row(
+                    children: [
+
+                      Icon(
+                        Icons
+                            .build_circle_outlined,
+
+                        color:
+                            AppCores
+                                .primaria,
+                      ),
+
+                      SizedBox(width: 8),
+
+                      Text(
+                        "Serviço",
+
+                        style: TextStyle(
+                          color:
+                              AppCores
+                                  .primaria,
+
+                          fontWeight:
+                              FontWeight
+                                  .bold,
+
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                      height: 16),
+
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+
+                    children: [
+
+                      _miniCampo(
+                        "Tipo Serviço",
+                        tipoServico,
+                      ),
+
+                      _miniCampo(
+                        "Seguradora",
+                        seguradora,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                      height: 18),
+
+                  const Text(
+                    "Descrição do Serviço",
+
+                    style: TextStyle(
+                      color:
+                          AppCores.primaria,
+
+                      fontWeight:
+                          FontWeight.bold,
+
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(
+                      height: 10),
+
+                  Text(
+                    descricaoServico,
+
+                    style: const TextStyle(
+                      color: AppCores
+                          .textoBranco,
+
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // =========================================================
+            // AÇÕES
+            // =========================================================
+
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+
+              children: [
+
+                _botaoAcao(
+                  icon: Icons.map,
+                  titulo: "Mapa",
+                  cor: AppCores.primaria,
+
+                  onTap: () =>
+                      _abrirMapa(
+                    enderecoCompleto,
+                  ),
+                ),
+
+                _botaoAcao(
+                  icon: Icons.phone,
+                  titulo: "Ligar",
+                  cor: AppCores
+                      .emAndamento,
+
+                  onTap: telefone
+                          .isEmpty
+                      ? null
+                      : () =>
+                          _ligarCliente(
+                            telefone,
+                          ),
+                ),
+
+                _botaoAcao(
+                  icon: Icons.chat,
+                  titulo: "WhatsApp",
+                  cor:
+                      AppCores.concluido,
+
+                  onTap: telefone
+                          .isEmpty
+                      ? null
+                      : () =>
+                          _abrirWhatsApp(
+                            telefone,
+                          ),
+                ),
+
+                _botaoAcao(
+                  icon:
+                      Icons.person_off,
+                  titulo: "Ausente",
+                  cor: AppCores.ausente,
+
+                  onTap: () {
+
+                    ScaffoldMessenger.of(
+                            context)
+                        .showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Cliente ausente...",
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 18),
+
+            // =========================================================
+            // INICIAR EXECUÇÃO
+            // =========================================================
+
+            SizedBox(
+              width: double.infinity,
+
+              child:
+                  ElevatedButton.icon(
+                style:
+                    ElevatedButton
+                        .styleFrom(
+                  backgroundColor:
+                      AppCores.primaria,
+
+                  minimumSize:
+                      const Size(
+                    double.infinity,
+                    54,
+                  ),
+                ),
+
+                onPressed: () {
+
+                  ScaffoldMessenger.of(
+                          context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Execução iniciada...",
+                      ),
+                    ),
+                  );
+                },
+
+                icon: const Icon(
+                  Icons.play_arrow,
+
+                  color: Colors.white,
+                ),
+
+                label: const Text(
+                  "Iniciar Execução",
+
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
-
-  Widget _sessaoTitulo(String texto) {
-    return Text(texto, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11, letterSpacing: 1.2));
-  }
-
-  Widget _infoLinha(IconData icone, String label, String valor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icone, size: 20, color: Colors.blueGrey),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                Text(valor, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _botaoAcaoRapida(IconData icone, String label, Color cor, VoidCallback onTap) {
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: cor,
-        side: BorderSide(color: cor),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      onPressed: onTap,
-      icon: Icon(icone, size: 18),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _botaoPrincipal({required String label, required Color cor, required IconData icone, required VoidCallback onPressed}) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: cor,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        onPressed: onPressed,
-        icon: Icon(icone),
-        label: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  // Restante dos métodos (_buildCardStatus, _statusEmAndamento, _executarCheckIn) seguem a mesma lógica anterior...
-  // [Cortei para brevidade, mas devem ser mantidos conforme o original]
-  
-  Widget _buildCardStatus() {
-    final bool isPendente = os.status == 'pendente';
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isPendente ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isPendente ? Colors.orange : Colors.green),
-      ),
-      child: Row(
-        children: [
-          Icon(isPendente ? Icons.timer : Icons.verified, color: isPendente ? Colors.orange : Colors.green),
-          const SizedBox(width: 12),
-          Text(
-            isPendente ? 'AGUARDANDO INÍCIO' : 'EM ATENDIMENTO AGORA',
-            style: TextStyle(fontWeight: FontWeight.bold, color: isPendente ? Colors.orange.shade900 : Colors.green.shade900),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusEmAndamento() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle, color: Colors.blue),
-          SizedBox(width: 8),
-          Text('Check-in realizado!', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  void _executarCheckIn(BuildContext context) {
-    context.read<ControleOSCubit>().realizarCheckIn(os.id);
-  }
-
-  void _finalizarAtendimento(BuildContext context) async {
-  final resultado = await Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const ModalAssinaturaWidget()),
-  );
-
-  if (resultado != null) {
-    // Aqui você tem resultado['nome'] e resultado['imagem'] (Uint8List)
-    // Agora é só passar para o PDF Service e salvar no Supabase!
-    print("Nome do recebedor: ${resultado['nome']}");
-  }
-}
-
 }

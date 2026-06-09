@@ -1,0 +1,6 @@
+enum PdfTemplateType {
+
+  clean,
+
+  dark,
+}

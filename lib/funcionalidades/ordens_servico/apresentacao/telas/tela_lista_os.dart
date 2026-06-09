@@ -49,7 +49,9 @@ class TelaListaOS extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => TelaDetalhesOS(os: os),
+                          builder: (_) => TecnicoOSDetalhes(
+                            os: os.toMap(),
+                          ),
                         ),
                       );
                     },

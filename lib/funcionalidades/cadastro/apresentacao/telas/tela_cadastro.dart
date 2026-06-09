@@ -1,183 +1,156 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 
-import '../../controle/cadastro_cubit.dart';
-import '../../../autenticacao/apresentacao/widgets/input_login_widget.dart';
+import '../../controle/cadastro_os_controller.dart';
+
+import 'cadastro_os/layouts/cadastro_os_mobile.dart';
+import 'cadastro_os/layouts/cadastro_os_desktop.dart';
+
+import 'cadastro_os/widgets/cadastro_os_header.dart';
+import 'cadastro_os/widgets/cadastro_os_actions.dart';
+
 import '../../../../compartilhado/tema_cores.dart';
 
-class TelaCadastro extends StatefulWidget {
-  const TelaCadastro({super.key});
+class TelaCadastroOS extends StatelessWidget {
+  const TelaCadastroOS({super.key});
 
   @override
-  State<TelaCadastro> createState() => _TelaCadastroState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CadastroOsController(),
+      child: const _TelaCadastroOSBody(),
+    );
+  }
 }
 
-class _TelaCadastroState extends State<TelaCadastro> {
-  // Inicialização explícita de todos os controllers
-  final TextEditingController _nomeEmpresaController = TextEditingController();
-  final TextEditingController _documentoController = TextEditingController(); 
-  final TextEditingController _responsavelController = TextEditingController(); 
-  final TextEditingController _telefoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _confirmarSenhaController = TextEditingController();
+class _TelaCadastroOSBody extends StatefulWidget {
+  const _TelaCadastroOSBody();
 
   @override
-  void dispose() {
-    _nomeEmpresaController.dispose();
-    _documentoController.dispose();
-    _responsavelController.dispose();
-    _telefoneController.dispose();
-    _emailController.dispose();
-    _senhaController.dispose();
-    _confirmarSenhaController.dispose();
-    super.dispose();
-  }
+  State<_TelaCadastroOSBody> createState() =>
+      _TelaCadastroOSBodyState();
+}
 
-  void _processarCadastro(BuildContext context) {
-    // Pegamos os valores primeiro para garantir que nenhum seja nulo na leitura
-    final String nomeEmpresa = _nomeEmpresaController.text.trim();
-    final String documento = _documentoController.text.trim();
-    final String responsavel = _responsavelController.text.trim();
-    final String telefone = _telefoneController.text.trim();
-    final String email = _emailController.text.trim();
-    final String senha = _senhaController.text.trim();
-    final String confirma = _confirmarSenhaController.text.trim();
+class _TelaCadastroOSBodyState
+    extends State<_TelaCadastroOSBody> {
 
-    if (senha != confirma) {
-      _exibirErro(context, "As senhas não coincidem!");
-      return;
-    }
+  final GlobalKey<FormState> _formKey =
+      GlobalKey<FormState>();
 
-    if (nomeEmpresa.isEmpty || documento.isEmpty || responsavel.isEmpty || email.isEmpty || senha.isEmpty) {
-      _exibirErro(context, "Preencha todos os campos obrigatórios.");
-      return;
-    }
+  Future<void> _salvar(
+    CadastroOsController controller,
+  ) async {
 
-    // Chama o Cubit com os valores já extraídos e validados
-    context.read<CadastroCubit>().cadastrarGestor(
-      email: email,
-      senha: senha,
-      nomeEmpresa: nomeEmpresa,
-      documento: documento,
-      responsavel: responsavel,
-      telefone: telefone,
+    final ok = await controller.enviar(
+      _formKey,
     );
+
+    if (!mounted) return;
+
+    if (ok) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'OS cadastrada com sucesso!',
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+
+    } else {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.errorMessage ??
+                'Erro ao cadastrar OS',
+          ),
+          backgroundColor: AppCores.cancelado,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+
+    final controller =
+        context.watch<CadastroOsController>();
+
+    final mobile =
+        MediaQuery.of(context).size.width < 700;
+
     return Scaffold(
       backgroundColor: AppCores.fundoEscuro,
+
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        centerTitle: true,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppCores.textoBranco),
+        backgroundColor: AppCores.cardEscuro,
+
+        title: const Text(
+          'Cadastro de Ordem de Serviço',
+          style: TextStyle(
+            color: AppCores.textoBranco,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
-      body: BlocProvider(
-        create: (context) => CadastroCubit(),
-        child: BlocConsumer<CadastroCubit, CadastroState>(
-          listener: (context, state) {
-            if (state is CadastroSuccess) {
-              _exibirSucesso(context);
-            } else if (state is CadastroError) {
-              _exibirErro(context, state.mensagem);
-            }
-          },
-          builder: (context, state) {
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
-                  decoration: BoxDecoration(
-                    color: AppCores.cardEscuro,
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: AppCores.bordaEscura),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildLogo(),
-                      _buildCabecalho(),
-                      const SizedBox(height: 30),
-                      InputLoginWidget(label: "Nome da Empresa", icon: Icons.business, controller: _nomeEmpresaController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "CNPJ ou CPF", icon: Icons.badge, controller: _documentoController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "Nome do Responsável", icon: Icons.person, controller: _responsavelController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "Telefone", icon: Icons.phone, controller: _telefoneController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "E-mail Administrativo", icon: Icons.email, controller: _emailController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "Senha de Acesso", icon: Icons.lock, isPassword: true, controller: _senhaController),
-                      const SizedBox(height: 15),
-                      InputLoginWidget(label: "Confirmar Senha", icon: Icons.lock_reset, isPassword: true, controller: _confirmarSenhaController),
-                      const SizedBox(height: 35),
-                      _buildBotaoCriar(state, context),
-                      const SizedBox(height: 15),
-                      _buildBotaoVoltar(),
-                    ],
-                  ),
+
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+
+            padding: EdgeInsets.symmetric(
+              horizontal: mobile ? 16 : 28,
+              vertical: 24,
+            ),
+
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 1400,
+              ),
+
+              child: Form(
+                key: _formKey,
+
+                child: Column(
+                  children: [
+
+                    const CadastroOSHeader(),
+
+                    const SizedBox(height: 24),
+
+                    mobile
+                        ? CadastroOSMobile(
+                            controller: controller,
+                          )
+                        : CadastroOSDesktop(
+                            controller: controller,
+                          ),
+
+                    const SizedBox(height: 32),
+
+                    CadastroOSActions(
+                      loading: controller.isLoading,
+
+                      onCancelar: () {
+                        Navigator.pop(context);
+                      },
+
+                      onSalvar: () async {
+                        await _salvar(controller);
+                      },
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
-  }
-
-  Widget _buildLogo() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Image.asset(
-        'assets/images/logo_basetec_simples.png',
-        height: 100,
-        errorBuilder: (context, e, s) => const Icon(Icons.business, color: AppCores.primaria, size: 80),
-      ),
-    );
-  }
-
-  Widget _buildCabecalho() {
-    return const Column(
-      children: [
-        Text("Seja um Gestor 🚀", style: TextStyle(color: AppCores.textoBranco, fontSize: 24, fontWeight: FontWeight.bold)),
-        SizedBox(height: 8),
-        Text("Crie sua conta empresarial agora.", style: TextStyle(color: AppCores.textoCinza, fontSize: 13), textAlign: TextAlign.center),
-      ],
-    );
-  }
-
-  Widget _buildBotaoCriar(CadastroState state, BuildContext context) {
-    final isLoading = state is CadastroLoading;
-    return Container(
-      width: double.infinity,
-      height: 55,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(colors: [Color(0xFF007BFF), Color(0xFF0056b3)]),
-      ),
-      child: ElevatedButton(
-        onPressed: isLoading ? null : () => _processarCadastro(context),
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
-        child: isLoading 
-          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-          : const Text("Finalizar Cadastro", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-      ),
-    );
-  }
-
-  Widget _buildBotaoVoltar() => TextButton(onPressed: () => Navigator.pop(context), child: const Text("Voltar para o Login", style: TextStyle(color: AppCores.textoCinza)));
-
-  void _exibirSucesso(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cadastrado com sucesso!"), backgroundColor: AppCores.concluido));
-    Navigator.pop(context);
-  }
-
-  void _exibirErro(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppCores.cancelado));
   }
 }
