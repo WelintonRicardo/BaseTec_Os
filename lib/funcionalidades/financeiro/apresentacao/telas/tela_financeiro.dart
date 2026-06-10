@@ -14,6 +14,7 @@ import '../../widgets/proximas_contas.dart';
 import '../../widgets/ranking_despesas.dart';
 import '../../widgets/saldo_meta.dart';
 
+import 'tela_lancamentos.dart';
 import '../../aplicacao/lancamentos_controller.dart';
 
 import '../../dominio/modelos/lancamento_model.dart';
