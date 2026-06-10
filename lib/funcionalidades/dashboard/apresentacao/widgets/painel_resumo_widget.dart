@@ -1,10 +1,6 @@
-// lib/funcionalidades/dashboard/apresentacao/widgets/painel_resumo_widget.dart
-
 import 'package:flutter/material.dart';
 import '../../../../compartilhado/tema_cores.dart';
 
-/// Widget de resumo do painel administrativo.
-/// Recebe listas de usuários e ordens de serviço já carregadas do Supabase.
 class PainelResumoWidget extends StatelessWidget {
   final List<Map<String, dynamic>> usuarios;
   final List<Map<String, dynamic>> ordensServico;
@@ -17,57 +13,102 @@ class PainelResumoWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalUsuarios = usuarios.length;
-    final totalOS = ordensServico.length;
-    final osConcluidas =
-        ordensServico.where((os) => os['status'] == 'concluida').length;
-    final osCanceladas =
-        ordensServico.where((os) => os['status'] == 'cancelada').length;
-    final osPendentes =
-        ordensServico.where((os) => os['status'] == 'pendente').length;
-    final osAguardando =
-        ordensServico.where((os) => os['status'] == 'aguardando_peca').length;
+    // calcular estatísticas
+    final totalUsuarios = usuarios.length.toString();
+    final totalOS = ordensServico.length.toString();
+    final concluidas = ordensServico.where((os) => os['status'] == 'concluida').length.toString();
+    final canceladas = ordensServico.where((os) => os['status'] == 'cancelada').length.toString();
+    final pendentes = ordensServico.where((os) => os['status'] == 'pendente').length.toString();
+    final aguardandoPeca = ordensServico.where((os) => os['status'] == 'aguardando_peca').length.toString();
 
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      children: [
-        _buildCard("Total O.S", "$totalOS", Icons.assignment, AppCores.primaria),
-        _buildCard("Usuários", "$totalUsuarios", Icons.people, AppCores.textoBranco),
-        _buildCard("Concluídas", "$osConcluidas", Icons.check_circle, AppCores.concluido),
-        _buildCard("Canceladas", "$osCanceladas", Icons.cancel, AppCores.cancelado),
-        _buildCard("Pendentes", "$osPendentes", Icons.hourglass_empty, AppCores.pendente),
-        _buildCard("Aguardando Peças", "$osAguardando", Icons.settings_input_component, AppCores.ausente),
-      ],
+    final List<Map<String, String>> dados = [
+      {"titulo": "Usuários", "valor": totalUsuarios, "cor": "primaria"},
+      {"titulo": "Total OS", "valor": totalOS, "cor": "secundaria"},
+      {"titulo": "Concluídas", "valor": concluidas, "cor": "concluido"},
+      {"titulo": "Canceladas", "valor": canceladas, "cor": "cancelado"},
+      {"titulo": "Pendentes", "valor": pendentes, "cor": "pendente"},
+      {"titulo": "Aguardando Peça", "valor": aguardandoPeca, "cor": "ausente"},
+    ];
+
+    // Responsividade
+    final largura = MediaQuery.of(context).size.width;
+    int crossAxisCount = 2; // mobile
+    if (largura >= 600 && largura < 1024) {
+      crossAxisCount = 3; // tablet
+    } else if (largura >= 1024) {
+      crossAxisCount = 6; // desktop
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: 2, // ✅ mais alto (cards maiores)
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+      ),
+      itemCount: dados.length,
+      itemBuilder: (context, index) {
+        final item = dados[index];
+        return _cardResumo(item["titulo"]!, item["valor"]!, _mapCor(item["cor"]!));
+      },
     );
   }
 
-  Widget _buildCard(String label, String valor, IconData icone, Color cor) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppCores.cardEscuro,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cor.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icone, color: cor, size: 30),
-          const SizedBox(height: 10),
-          Text(
-            valor,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+  Color _mapCor(String cor) {
+    switch (cor) {
+      case "primaria":
+        return AppCores.primaria;
+      case "secundaria":
+        return AppCores.secundaria;
+      case "concluido":
+        return AppCores.concluido;
+      case "cancelado":
+        return AppCores.cancelado;
+      case "pendente":
+        return AppCores.pendente;
+      case "ausente":
+        return AppCores.ausente;
+      default:
+        return AppCores.textoBranco;
+    }
+  }
+
+  Widget _cardResumo(String titulo, String valor, Color cor) {
+    return InkWell( // ✅ já preparado para ser tocável
+      onTap: () {
+        // ação futura aqui
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14), // ✅ mais espaçamento
+        decoration: BoxDecoration(
+          color: AppCores.cardEscuro,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              valor,
+              style: TextStyle(
+                color: cor,
+                fontSize: 18, // ✅ fonte maior
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white60, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              titulo,
+              style: const TextStyle(
+                color: AppCores.textoBranco,
+                fontSize: 12, // ✅ fonte maior
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
