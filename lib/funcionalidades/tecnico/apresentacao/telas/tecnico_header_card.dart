@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../compartilhado/tema_cores.dart';
 import '../../dados/repositorios/tecnico_repository.dart';
+import 'dart:async';
+import '../../../../compartilhado/dados/supabase_notifier.dart';
 
 /// ======================================================
 /// CARD SUPERIOR DO PAINEL DO TÉCNICO
@@ -23,22 +25,19 @@ import '../../dados/repositorios/tecnico_repository.dart';
 /// ======================================================
 
 class TecnicoHeaderCard extends StatefulWidget {
-  const TecnicoHeaderCard({
-    super.key,
-  });
+  const TecnicoHeaderCard({super.key});
 
   @override
-  State<TecnicoHeaderCard> createState() =>
-      _TecnicoHeaderCardState();
+  State<TecnicoHeaderCard> createState() => _TecnicoHeaderCardState();
 }
 
-class _TecnicoHeaderCardState
-    extends State<TecnicoHeaderCard> {
-
+class _TecnicoHeaderCardState extends State<TecnicoHeaderCard> {
   /// Repository responsável
   /// pelas consultas no Supabase
-  final TecnicoRepository _repository =
-      TecnicoRepository();
+  final TecnicoRepository _repository = TecnicoRepository();
+  final SupabaseNotifier notifier = SupabaseNotifier();
+
+  StreamSubscription? _subscription;
 
   /// Controle de loading
   bool _loading = true;
@@ -51,30 +50,27 @@ class _TecnicoHeaderCardState
     super.initState();
 
     carregarDados();
+
+    _subscription = notifier.onOrdensServicoChange().listen((_) {
+      carregarDados();
+    });
   }
 
   /// ======================================================
   /// CARREGA DADOS DO DASHBOARD
   /// ======================================================
   Future<void> carregarDados() async {
-
     try {
-
-      final response =
-          await _repository
-              .carregarDashboardTecnico();
+      final response = await _repository.carregarDashboardTecnico();
 
       if (!mounted) return;
 
       setState(() {
-
         dados = response;
 
         _loading = false;
       });
-
     } catch (e) {
-
       if (!mounted) return;
 
       setState(() {
@@ -85,73 +81,52 @@ class _TecnicoHeaderCardState
 
   @override
   Widget build(BuildContext context) {
-
     /// ============================================
     /// LOADING
     /// ============================================
     if (_loading) {
-
       return Container(
-
         padding: const EdgeInsets.all(24),
 
         decoration: BoxDecoration(
-
           color: AppCores.cardEscuro,
 
-          borderRadius:
-              BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16),
         ),
 
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
     /// ============================================
     /// DADOS
     /// ============================================
-    final empresa =
-        dados['empresa']?.toString() ??
-            'Empresa';
+    final empresa = dados['empresa']?.toString() ?? 'Empresa';
 
-    final nomeTecnico =
-        dados['nomeTecnico']?.toString() ??
-            'Técnico';
+    final nomeTecnico = dados['nomeTecnico']?.toString() ?? 'Técnico';
 
-    final concluidos =
-        dados['concluidos'] ?? 0;
+    final concluidos = dados['concluidos'] ?? 0;
 
-    final aguardandoPeca =
-        dados['aguardandoPeca'] ?? 0;
+    final aguardandoPeca = dados['aguardandoPeca'] ?? 0;
 
-    final retornoGarantia =
-        dados['retornoGarantia'] ?? 0;
+    final pendentes = dados['pendentes'] ?? 0;
 
-    final ausentes =
-        dados['ausentes'] ?? 0;
+    final ausentes = dados['ausentes'] ?? 0;
 
-    final totalMes =
-        dados['totalMes'] ?? 0;
+    final totalMes = dados['totalMes'] ?? 0;
 
     /// ============================================
     /// CARD PRINCIPAL
     /// ============================================
     return Container(
-
       padding: const EdgeInsets.all(20),
 
       decoration: BoxDecoration(
-
         color: AppCores.cardEscuro,
 
-        borderRadius:
-            BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20),
 
-        border: Border.all(
-          color: AppCores.bordaEscura,
-        ),
+        border: Border.all(color: AppCores.bordaEscura),
 
         boxShadow: [
           BoxShadow(
@@ -163,15 +138,11 @@ class _TecnicoHeaderCardState
       ),
 
       child: Column(
-
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
 
         children: [
-
           /// EMPRESA
           Text(
-
             empresa,
 
             style: const TextStyle(
@@ -185,7 +156,6 @@ class _TecnicoHeaderCardState
 
           /// NOME TÉCNICO
           Text(
-
             'Olá, $nomeTecnico 👋',
 
             style: const TextStyle(
@@ -197,50 +167,29 @@ class _TecnicoHeaderCardState
 
           const SizedBox(height: 18),
 
-          Divider(
-            color: Colors.white.withOpacity(0.1),
-            height: 1,
-          ),
+          Divider(color: Colors.white.withOpacity(0.1), height: 1),
 
           const SizedBox(height: 20),
 
           /// ESTATÍSTICAS
           Wrap(
-
             spacing: 14,
             runSpacing: 14,
 
             children: [
-
-              _buildStat(
-                'Concluídos',
-                concluidos,
-                AppCores.concluido,
-              ),
+              _buildStat('Pendentes', pendentes, AppCores.pendente),
 
               _buildStat(
                 'Aguardando Peça',
                 aguardandoPeca,
-                AppCores.pendente,
-              ),
-
-              _buildStat(
-                'Retorno Garantia',
-                retornoGarantia,
                 AppCores.emAndamento,
               ),
 
-              _buildStat(
-                'Ausentes',
-                ausentes,
-                AppCores.ausente,
-              ),
+              _buildStat('Cliente Ausente', ausentes, AppCores.ausente),
 
-              _buildStat(
-                'Total no mês',
-                totalMes,
-                AppCores.textoBranco,
-              ),
+              _buildStat('Concluídas', concluidos, AppCores.concluido),
+
+              _buildStat('Total de OS', totalMes, AppCores.textoBranco),
             ],
           ),
         ],
@@ -248,41 +197,33 @@ class _TecnicoHeaderCardState
     );
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
   /// ======================================================
   /// CARD PEQUENO DE ESTATÍSTICA
   /// ======================================================
-  Widget _buildStat(
-    String label,
-    int value,
-    Color color,
-  ) {
-
+  Widget _buildStat(String label, int value, Color color) {
     return Container(
-
       width: 120,
 
       padding: const EdgeInsets.all(14),
 
       decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
 
-        color:
-            color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(14),
 
-        borderRadius:
-            BorderRadius.circular(14),
-
-        border: Border.all(
-          color: color.withOpacity(0.25),
-        ),
+        border: Border.all(color: color.withOpacity(0.25)),
       ),
 
       child: Column(
-
         children: [
-
           /// VALOR
           Text(
-
             value.toString(),
 
             style: TextStyle(
@@ -296,7 +237,6 @@ class _TecnicoHeaderCardState
 
           /// LABEL
           Text(
-
             label,
 
             textAlign: TextAlign.center,

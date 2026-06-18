@@ -13,6 +13,8 @@ import '../../../financeiro/apresentacao/telas/tela_financeiro.dart';
 
 import '../../../../compartilhado/layouts/layout_erp.dart';
 
+import '../../../financeiro/apresentacao/telas/tela_lancamentos.dart';
+
 List<Widget> buildAppBarActions(BuildContext context) {
   return [
     // =========================================================
@@ -173,12 +175,7 @@ void _onMenuSelected(BuildContext context, String key) {
               const TelaFinanceiro(),
 
               // LANÇAMENTOS
-              const Center(
-                child: Text(
-                  'Lançamentos',
-                  style: TextStyle(color: AppCores.textoBranco),
-                ),
-              ),
+              const TelaLancamentos(),
 
               // RECEITAS
               const Center(

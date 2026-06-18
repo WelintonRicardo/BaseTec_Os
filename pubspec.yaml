@@ -94,4 +94,4 @@ flutter_native_splash:
     image: assets/logo_basetec_full.png
     color: "#ffffff"
 
-  web: true
+  web: false

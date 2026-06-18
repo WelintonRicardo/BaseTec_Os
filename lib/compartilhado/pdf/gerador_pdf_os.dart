@@ -78,10 +78,23 @@ class GeradorPdfOs {
     // EXECUÇÃO
     // =====================================================
 
-    final execucao =
-        (os['execucoes_os'] is List && (os['execucoes_os'] as List).isNotEmpty)
-        ? (os['execucoes_os'] as List).last
-        : null;
+    Map<String, dynamic>? execucao;
+
+    final execucoes = os['execucoes_os'];
+
+    if (execucoes is List && execucoes.isNotEmpty) {
+      for (final item in execucoes) {
+        if (item['status_execucao']?.toString().toLowerCase() == 'finalizado') {
+          execucao = Map<String, dynamic>.from(item);
+
+          break;
+        }
+      }
+
+      if (execucao == null) {
+        execucao = Map<String, dynamic>.from(execucoes.first);
+      }
+    }
 
     // =====================================================
     // DEBUG
@@ -158,26 +171,28 @@ class GeradorPdfOs {
     // FOTOS
     // =====================================================
 
-    final List<Uint8List> fotos = [];
-
-    Future<void> adicionarFoto(String? url) async {
+    Future<Uint8List?> baixarFoto(String? url) async {
       try {
         if (url == null || url.isEmpty) {
-          return;
+          return null;
         }
 
         final response = await http.get(Uri.parse(url));
 
         if (response.statusCode == 200) {
-          fotos.add(response.bodyBytes);
+          return response.bodyBytes;
         }
       } catch (_) {}
+
+      return null;
     }
+    // =====================================================
+    // CARREGAR FOTOS
+    // =====================================================
 
-    await adicionarFoto(execucao?['foto_inicio']?.toString());
+    final fotoInicio = await baixarFoto(execucao?['foto_inicio']?.toString());
 
-    await adicionarFoto(execucao?['foto_fim']?.toString());
-
+    final fotoFim = await baixarFoto(execucao?['foto_fim']?.toString());
     // =====================================================
     // ASSINATURAS
     // =====================================================
@@ -449,10 +464,97 @@ class GeradorPdfOs {
             // =================================================
             PdfSection.build(
               template: template,
-
               title: 'Registro Fotográfico',
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    // FOTO INICIAL
+                    pw.Expanded(
+                      child: pw.Column(
+                        children: [
+                          pw.Text(
+                            'FOTO INICIAL',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
 
-              children: [PdfPhotoGrid.build(template: template, fotos: fotos)],
+                          pw.SizedBox(height: 8),
+
+                          fotoInicio != null
+                              ? pw.Container(
+                                  height: 180,
+                                  decoration: pw.BoxDecoration(
+                                    border: pw.Border.all(
+                                      color: PdfColors.grey400,
+                                    ),
+                                  ),
+                                  child: pw.Image(
+                                    pw.MemoryImage(fotoInicio),
+                                    fit: pw.BoxFit.cover,
+                                  ),
+                                )
+                              : pw.Container(
+                                  height: 180,
+                                  alignment: pw.Alignment.center,
+                                  decoration: pw.BoxDecoration(
+                                    border: pw.Border.all(
+                                      color: PdfColors.grey400,
+                                    ),
+                                  ),
+                                  child: pw.Text('Sem foto'),
+                                ),
+                        ],
+                      ),
+                    ),
+
+                    pw.SizedBox(width: 20),
+
+                    // FOTO FINAL
+                    pw.Expanded(
+                      child: pw.Column(
+                        children: [
+                          pw.Text(
+                            'FOTO FINAL',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+
+                          pw.SizedBox(height: 8),
+
+                          fotoFim != null
+                              ? pw.Container(
+                                  height: 180,
+                                  decoration: pw.BoxDecoration(
+                                    border: pw.Border.all(
+                                      color: PdfColors.grey400,
+                                    ),
+                                  ),
+                                  child: pw.Image(
+                                    pw.MemoryImage(fotoFim),
+                                    fit: pw.BoxFit.cover,
+                                  ),
+                                )
+                              : pw.Container(
+                                  height: 180,
+                                  alignment: pw.Alignment.center,
+                                  decoration: pw.BoxDecoration(
+                                    border: pw.Border.all(
+                                      color: PdfColors.grey400,
+                                    ),
+                                  ),
+                                  child: pw.Text('Sem foto'),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             pw.SizedBox(height: 30),

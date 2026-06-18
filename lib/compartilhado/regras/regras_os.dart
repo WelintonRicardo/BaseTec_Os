@@ -24,8 +24,8 @@ class RegrasOS {
 
   static const List<String> statusFinais = [
     'CONCLUIDO',
-    'AGUARDANDO_PECA',
-    'CLIENTE_AUSENTE',
+    'AGUARDANDO PECA',
+    'CLIENTE AUSENTE',
   ];
 
   // ==========================================

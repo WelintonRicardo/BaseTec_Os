@@ -1,5 +1,5 @@
 // lib/funcionalidades/dashboard/apresentacao/telas/tela_admin.dart
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,6 +20,9 @@ import '../../../adm/apresentacao/widgets/calendario_br.dart';
 import '../../../adm/apresentacao/widgets/lista_tecnicos.dart';
 import '../../../adm/apresentacao/widgets/lista_os_dia.dart';
 
+import 'package:flutter/services.dart';
+import '../../../../compartilhado/pdf/servicos/servico_compartilhamento_os.dart';
+
 class TelaAdmin extends StatefulWidget {
   const TelaAdmin({super.key});
 
@@ -31,6 +34,16 @@ class _TelaAdminState extends State<TelaAdmin> {
   final AdminRepository _adminRepo = AdminRepository();
   final TecnicoRepository _tecnicoRepo = TecnicoRepository();
   final SupabaseNotifier _notifier = SupabaseNotifier();
+
+  final TextEditingController _buscaController = TextEditingController();
+
+  List<Map<String, dynamic>> _ordensServicoOriginal = [];
+
+  StreamSubscription? _osSubscription;
+  StreamSubscription? _perfilSubscription;
+  StreamSubscription? _execucaoSubscription;
+
+  bool _disposed = false;
 
   List<Map<String, dynamic>> _usuarios = [];
   List<Map<String, dynamic>> _tecnicos = [];
@@ -95,22 +108,61 @@ class _TelaAdminState extends State<TelaAdmin> {
       // calcular estatísticas dos técnicos
       for (var tecnico in tecnicos) {
         final tecnicoId = tecnico['id'].toString();
+
         final osDoTecnico = os.where((item) {
           return item['tecnico_id']?.toString() == tecnicoId;
         }).toList();
 
-        final concluidas = osDoTecnico.where((item) {
-          final status = item['status']?.toString().toLowerCase();
-          return status == 'concluido';
-        }).length;
+        int concluidas = 0;
+        int pendentes = 0;
+        int aguardandoPeca = 0;
+        int clienteAusente = 0;
 
-        tecnico['total_os_mes'] = osDoTecnico.length;
+        for (final ordem in osDoTecnico) {
+          final status = (ordem['status'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+
+          switch (status) {
+            case 'concluido':
+            case 'concluida':
+              concluidas++;
+              break;
+
+            case 'pendente':
+              pendentes++;
+              break;
+
+            case 'aguardando_peca':
+              aguardandoPeca++;
+              break;
+
+            case 'cliente ausente':
+              clienteAusente++;
+              break;
+          }
+        }
+
         tecnico['concluidas'] = concluidas;
+        tecnico['pendentes'] = pendentes;
+        tecnico['aguardando_peca'] = aguardandoPeca;
+        tecnico['cliente_ausente'] = clienteAusente;
+
+        tecnico['total_os_mes'] =
+            concluidas + pendentes + aguardandoPeca + clienteAusente;
+      }
+
+      if (!mounted || _disposed) {
+        return;
       }
 
       setState(() {
         _usuarios = usuarios;
         _tecnicos = tecnicos;
+
+        _ordensServicoOriginal = List<Map<String, dynamic>>.from(os);
+
         _ordensServico = List<Map<String, dynamic>>.from(os);
       });
     } catch (e, s) {
@@ -120,17 +172,78 @@ class _TelaAdminState extends State<TelaAdmin> {
   }
 
   void _escutarMudancas() {
-    _notifier.onProfilesChange().listen((dados) {
-      if (dados['empresa_id'] == _empresaId) {
-        _carregarDados();
-      }
-    });
+    _perfilSubscription = _notifier.onProfilesChange().listen(
+      _processarEventoRealtime,
+    );
 
-    _notifier.onOrdensServicoChange().listen((dados) {
-      if (dados['empresa_id'] == _empresaId) {
-        _carregarDados();
-      }
-    });
+    _osSubscription = _notifier.onOrdensServicoChange().listen(
+      _processarEventoRealtime,
+    );
+
+    _execucaoSubscription = _notifier.onExecucoesOSChange().listen(
+      _processarEventoRealtime,
+    );
+  }
+
+  Future<void> _processarEventoRealtime(Map<String, dynamic> dados) async {
+    if (_empresaId == null) {
+      return;
+    }
+
+    final novo = dados['new'] as Map<String, dynamic>? ?? {};
+
+    final antigo = dados['old'] as Map<String, dynamic>? ?? {};
+
+    final empresaEvento = novo['empresa_id'] ?? antigo['empresa_id'];
+
+    if (empresaEvento == null) {
+      return;
+    }
+
+    if (empresaEvento.toString() != _empresaId) {
+      return;
+    }
+
+    debugPrint('Realtime recebido: ${dados['event']}');
+
+    await _carregarDados();
+  }
+
+  // COMPARTILHAR PDF
+  void compartilharOS(int osId) async {
+    try {
+      final servico = ServicoCompartilhamentoOS();
+
+      final link = await ServicoCompartilhamentoOS().obterOuCriarLink(osId);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: const Text("Compartilhar OS"),
+            content: SelectableText(link),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: link));
+                },
+                child: const Text("Copiar link"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Fechar"),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro ao gerar link de compartilhamento")),
+      );
+    }
   }
 
   //===========================================================@override
@@ -142,7 +255,10 @@ class _TelaAdminState extends State<TelaAdmin> {
       backgroundColor: AppCores.fundoEscuro,
       appBar: AppBar(
         backgroundColor: AppCores.cardEscuro,
-        title: const AdminSearchBarWidget(),
+        title: AdminSearchBarWidget(
+          controller: _buscaController,
+          onChanged: _filtrarOrdensServico,
+        ),
         actions: buildAppBarActions(context), // ✅ agora vem do arquivo separado
       ),
       body: ResponsiveLayout(
@@ -217,58 +333,85 @@ class _TelaAdminState extends State<TelaAdmin> {
           //=========Layout Desktop + FAB===================================context
           //=======================================================================
           // DESKTOP
-          return Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(w * 2.5),
-                  child: Column(
-                    children: [
-                      buildCalendarioBR(
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(w * 2.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // KPI
+                PainelResumoWidget(
+                  usuarios: _usuarios,
+                  ordensServico: _ordensServico,
+                ),
+
+                SizedBox(height: h * 3),
+
+                // CALENDÁRIO + TÉCNICOS
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: buildCalendarioBR(
                         selectedDay: _dataSelecionada,
                         onDaySelected: (date) {
                           setState(() => _dataSelecionada = date);
                         },
                       ),
-                      SizedBox(height: h * 2),
-                      buildListaTecnicos(_tecnicos),
-                    ],
-                  ),
+                    ),
+
+                    SizedBox(width: w * 2),
+
+                    Expanded(flex: 6, child: buildListaTecnicos(_tecnicos)),
+                  ],
                 ),
-              ),
-              Expanded(
-                flex: 7,
-                child: Padding(
-                  padding: EdgeInsets.all(w * 2.5),
+
+                SizedBox(height: h * 3),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppCores.cardEscuro,
+                        AppCores.cardEscuro.withOpacity(0.85),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppCores.primaria.withOpacity(0.15),
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      PainelResumoWidget(
-                        usuarios: _usuarios,
-                        ordensServico: _ordensServico,
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.assignment_rounded,
+                            color: AppCores.primaria,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            "Ordens de Serviço do Dia",
+                            style: TextStyle(
+                              color: AppCores.textoBranco,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: h * 3),
-                      const Text(
-                        "Ordens de Serviço do Dia",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+
                       SizedBox(height: h * 2),
-                      Expanded(
-                        child: buildListaOSDia(
-                          _ordensServico,
-                          _dataSelecionada,
-                        ),
-                      ),
+
+                      buildListaOSDia(_ordensServico, _dataSelecionada),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -285,4 +428,69 @@ class _TelaAdminState extends State<TelaAdmin> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _disposed = true;
+
+    _osSubscription?.cancel();
+    _perfilSubscription?.cancel();
+    _execucaoSubscription?.cancel();
+
+    super.dispose();
+  }
+
+
+  
+
+  void _filtrarOrdensServico(String texto) {
+  final busca = texto.trim().toLowerCase();
+
+  if (busca.isEmpty) {
+    setState(() {
+      _ordensServico =
+          List<Map<String, dynamic>>.from(
+        _ordensServicoOriginal,
+      );
+    });
+    return;
+  }
+
+  setState(() {
+    _ordensServico =
+        _ordensServicoOriginal.where((os) {
+      final nomeSegurado =
+          (os['nome_segurado'] ?? '')
+              .toString()
+              .toLowerCase();
+
+      final numeroOs =
+          (os['numero_os'] ?? '')
+              .toString()
+              .toLowerCase();
+
+      final telefone =
+          (os['telefone'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'[^0-9]'), '');
+
+      final buscaTelefone =
+          busca.replaceAll(RegExp(r'[^0-9]'), '');
+
+      final encontrouNome =
+          nomeSegurado.contains(busca);
+
+      final encontrouOs =
+          numeroOs.contains(busca);
+
+      final encontrouTelefone =
+          buscaTelefone.isNotEmpty &&
+          telefone.contains(buscaTelefone);
+
+      return encontrouNome ||
+          encontrouOs ||
+          encontrouTelefone;
+    }).toList();
+  });
+}
 }

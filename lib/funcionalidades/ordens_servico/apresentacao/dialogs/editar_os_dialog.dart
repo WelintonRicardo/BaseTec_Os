@@ -294,8 +294,8 @@ class _EditarOsDialogState extends State<EditarOsDialog> {
                       child: Text('Em execução'),
                     ),
                     DropdownMenuItem(
-                      value: 'concluida',
-                      child: Text('Concluída'),
+                      value: 'concluido',
+                      child: Text('concluido'),
                     ),
                     DropdownMenuItem(
                       value: 'cancelada',

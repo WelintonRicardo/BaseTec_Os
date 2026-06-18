@@ -134,7 +134,7 @@ class _TelaLancamentosState extends State<TelaLancamentos> {
                 _filtros(),
 
                 const SizedBox(height: 24),
-
+                
                 // ===================================================
                 // TABELA
                 // ===================================================
@@ -162,7 +162,7 @@ class _TelaLancamentosState extends State<TelaLancamentos> {
 
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
-
+                      
                       child: DataTable(
                         headingRowHeight: 60,
 

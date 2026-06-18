@@ -25,7 +25,7 @@ class PdfOsRepository {
   status_final,
   inicio_execucao,
   fim_execucao,
-  created_at,
+  criado_em,
   solicitacao_cliente,
   defeito_constatado,
   solucao_aplicada,
@@ -53,56 +53,75 @@ class PdfOsRepository {
       final execucoes = response?['execucoes_os'];
 
       if (execucoes is List && execucoes.isNotEmpty) {
-        final ultimaExecucao = execucoes.last;
+        final execucoesOrdenadas =
+    List<Map<String, dynamic>>.from(execucoes);
+
+execucoesOrdenadas.sort(
+  (a, b) => DateTime.parse(
+    b['criado_em'],
+  ).compareTo(
+    DateTime.parse(a['criado_em']),
+  ),
+);
+
+final ultimaExecucaoFinalizada =
+    execucoesOrdenadas.firstWhere(
+      (e) =>
+          e['status_execucao']
+              .toString()
+              .toLowerCase() ==
+          'finalizado',
+      orElse: () => execucoesOrdenadas.first,
+    );
 
         print('================================');
         print('ULTIMA EXECUCAO');
-        print(ultimaExecucao);
+        print(ultimaExecucaoFinalizada);
         print('================================');
 
         print('================================');
         print('SOLICITACAO');
-        print(ultimaExecucao['solicitacao_cliente']);
+        print(ultimaExecucaoFinalizada['solicitacao_cliente']);
         print('================================');
 
         print('================================');
         print('DEFEITO');
-        print(ultimaExecucao['defeito_constatado']);
+        print(ultimaExecucaoFinalizada['defeito_constatado']);
         print('================================');
 
         print('================================');
         print('SOLUCAO');
-        print(ultimaExecucao['solucao_aplicada']);
+        print(ultimaExecucaoFinalizada['solucao_aplicada']);
         print('================================');
 
         print('================================');
         print('OBSERVACAO FINAL');
-        print(ultimaExecucao['observacao_final']);
+        print(ultimaExecucaoFinalizada['observacao_final']);
         print('================================');
 
         print('================================');
         print('FOTO INICIO');
-        print(ultimaExecucao['foto_inicio']);
+        print(ultimaExecucaoFinalizada['foto_inicio']);
         print('================================');
 
         print('================================');
         print('FOTO FIM');
-        print(ultimaExecucao['foto_fim']);
+        print(ultimaExecucaoFinalizada['foto_fim']);
         print('================================');
 
         print('================================');
         print('ASSINATURA CLIENTE');
-        print(ultimaExecucao['assinatura_cliente_url']);
+        print(ultimaExecucaoFinalizada['assinatura_cliente_url']);
         print('================================');
 
         print('================================');
         print('ASSINATURA TECNICO');
-        print(ultimaExecucao['assinatura_tecnico_url']);
+        print(ultimaExecucaoFinalizada['assinatura_tecnico_url']);
         print('================================');
 
         print('================================');
         print('CHECKLIST');
-        print(ultimaExecucao['checklist']);
+        print(ultimaExecucaoFinalizada['checklist']);
         print('================================');
       } else {
         print('================================');

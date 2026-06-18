@@ -4,7 +4,9 @@ import '../../../../compartilhado/tema_cores.dart';
 
 import '../../aplicacao/lancamentos_controller.dart';
 import '../../aplicacao/financeiro_controller.dart';
+
 import '../../dominio/modelos/transacao_model.dart';
+import '../../dominio/modelos/lancamento_model.dart';
 
 import '../../widgets/card_resumo.dart';
 import '../../widgets/fluxo_caixa.dart';
@@ -13,16 +15,29 @@ import '../../widgets/lista_transacoes.dart';
 import '../../widgets/proximas_contas.dart';
 import '../../widgets/ranking_despesas.dart';
 import '../../widgets/saldo_meta.dart';
-
-import 'tela_lancamentos.dart';
-import '../../aplicacao/lancamentos_controller.dart';
-
-import '../../dominio/modelos/lancamento_model.dart';
-
 import '../../widgets/modal_novo_lancamento.dart';
 
-class TelaFinanceiro extends StatelessWidget {
+import '../../dados/servicos/financeiro_service.dart';
+
+// ==========================================================
+// TELA FINANCEIRO
+// ==========================================================
+
+class TelaFinanceiro extends StatefulWidget {
   const TelaFinanceiro({super.key});
+
+  @override
+  State<TelaFinanceiro> createState() => _TelaFinanceiroState();
+}
+
+// ==========================================================
+// STATE
+// ==========================================================
+
+class _TelaFinanceiroState extends State<TelaFinanceiro> {
+  final FinanceiroService financeiroService = FinanceiroService();
+  final FinanceiroController financeiroController = FinanceiroController();
+  final LancamentosController lancamentosController = LancamentosController();
 
   TextStyle get tituloSecao => const TextStyle(
     color: AppCores.textoBranco,
@@ -32,81 +47,45 @@ class TelaFinanceiro extends StatelessWidget {
   );
 
   @override
+  void initState() {
+    super.initState();
+    carregarFinanceiro();
+  }
+
+  Future<void> carregarFinanceiro() async {
+    debugPrint('INICIANDO FINANCEIRO');
+
+    await financeiroService.iniciar();
+    await financeiroService.sincronizarOSExistentes();
+
+    final transacoes = await financeiroService.buscarTransacoes();
+    debugPrint('TOTAL TRANSAÇÕES: ${transacoes.length}');
+
+    for (final t in transacoes) {
+      debugPrint('${t.descricao} - ${t.valor}');
+    }
+
+    financeiroController.carregarTransacoes(transacoes);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    financeiroService.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final financeiroController = FinanceiroController();
-    final lancamentosController = LancamentosController();
-
-    lancamentosController.carregarDadosMock();
-    // =========================================================
-    // DADOS EXEMPLO
-    // =========================================================
-
-    financeiroController.adicionarTransacao(
-      Transacao(
-        id: '1',
-        descricao: 'Supermercado',
-        valor: 250,
-        data: DateTime.now(),
-        isReceita: false,
-        categoria: 'Alimentação',
-      ),
-    );
-
-    financeiroController.adicionarTransacao(
-      Transacao(
-        id: '2',
-        descricao: 'Aluguel',
-        valor: 1200,
-        data: DateTime.now(),
-        isReceita: false,
-        categoria: 'Moradia',
-      ),
-    );
-
-    financeiroController.adicionarTransacao(
-      Transacao(
-        id: '3',
-        descricao: 'Salário',
-        valor: 5000,
-        data: DateTime.now(),
-        isReceita: true,
-        categoria: 'Receita',
-      ),
-    );
-
-    financeiroController.adicionarTransacao(
-      Transacao(
-        id: '4',
-        descricao: 'Freelance',
-        valor: 2000,
-        data: DateTime(2026, 5, 10),
-        isReceita: true,
-        categoria: 'Receita',
-      ),
-    );
-
-    financeiroController.adicionarTransacao(
-      Transacao(
-        id: '5',
-        descricao: 'Viagem',
-        valor: 800,
-        data: DateTime(2026, 4, 20),
-        isReceita: false,
-        categoria: 'Lazer',
-      ),
-    );
-
     return Scaffold(
       backgroundColor: AppCores.fundoEscuro,
-
-      // =======================================================
-      // APP BAR
-      // =======================================================
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        centerTitle: false,
         title: const Text(
           'Dashboard Financeiro',
           style: TextStyle(
@@ -115,50 +94,27 @@ class TelaFinanceiro extends StatelessWidget {
             fontSize: 26,
           ),
         ),
-
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
-
             child: ElevatedButton.icon(
               onPressed: () {
                 showDialog(
                   context: context,
-
                   builder: (_) => ModalNovoLancamento(
                     onSalvar: (LancamentoModel lancamento) {
                       lancamentosController.adicionarLancamento(lancamento);
+                      setState(() {});
                     },
                   ),
                 );
               },
-
               icon: const Icon(Icons.add_rounded),
-
               label: const Text('Novo lançamento'),
-
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppCores.primaria,
-
-                foregroundColor: Colors.white,
-
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 18,
-                ),
-
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
             ),
           ),
         ],
       ),
-
-      // =======================================================
-      // BODY
-      // =======================================================
       body: Container(
         decoration: const BoxDecoration(gradient: AppCores.gradienteFundo),
         child: SafeArea(
@@ -186,9 +142,7 @@ class TelaFinanceiro extends StatelessWidget {
                                         '+ R\$ ${financeiroController.totalReceitas.toStringAsFixed(2)}',
                                     cor: AppCores.receita,
                                   ),
-
                                   const SizedBox(height: 20),
-
                                   CardResumo(
                                     titulo: 'Despesas',
                                     valor:
@@ -207,9 +161,7 @@ class TelaFinanceiro extends StatelessWidget {
                                       cor: AppCores.receita,
                                     ),
                                   ),
-
                                   const SizedBox(width: 20),
-
                                   Expanded(
                                     child: CardResumo(
                                       titulo: 'Despesas',
@@ -220,7 +172,6 @@ class TelaFinanceiro extends StatelessWidget {
                                   ),
                                 ],
                               ),
-
                         const SizedBox(height: 28),
 
                         // ===================================================
@@ -229,25 +180,18 @@ class TelaFinanceiro extends StatelessWidget {
                         mobile
                             ? Column(
                                 children: [
-                                  // SALDO
                                   SaldoMeta(
                                     controller: financeiroController,
                                     metaMensal: 15000,
                                   ),
-
                                   const SizedBox(height: 24),
-
-                                  // GRAFICO
                                   _secao(
                                     titulo: 'Visão Geral de Gastos',
                                     child: GraficoPizza(
                                       controller: financeiroController,
                                     ),
                                   ),
-
                                   const SizedBox(height: 24),
-
-                                  // TRANSAÇÕES
                                   _secao(
                                     titulo: 'Últimas Transações',
                                     child: ListaTransacoes(
@@ -269,9 +213,7 @@ class TelaFinanceiro extends StatelessWidget {
                                       metaMensal: 15000,
                                     ),
                                   ),
-
                                   const SizedBox(width: 20),
-
                                   Expanded(
                                     child: _secao(
                                       titulo: 'Visão Geral de Gastos',
@@ -280,9 +222,7 @@ class TelaFinanceiro extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-
                                   const SizedBox(width: 20),
-
                                   Expanded(
                                     child: _secao(
                                       titulo: 'Últimas Transações',
@@ -297,7 +237,6 @@ class TelaFinanceiro extends StatelessWidget {
                                   ),
                                 ],
                               ),
-
                         const SizedBox(height: 28),
 
                         // ===================================================
@@ -328,9 +267,7 @@ class TelaFinanceiro extends StatelessWidget {
                                       ],
                                     ),
                                   ),
-
                                   const SizedBox(height: 24),
-
                                   _secao(
                                     titulo: 'Ranking de Despesas',
                                     child: RankingDespesas(
@@ -366,9 +303,7 @@ class TelaFinanceiro extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-
                                   const SizedBox(width: 20),
-
                                   Expanded(
                                     child: _secao(
                                       titulo: 'Ranking de Despesas',
@@ -379,7 +314,6 @@ class TelaFinanceiro extends StatelessWidget {
                                   ),
                                 ],
                               ),
-
                         const SizedBox(height: 28),
 
                         // ===================================================
@@ -392,7 +326,6 @@ class TelaFinanceiro extends StatelessWidget {
                             child: FluxoCaixa(controller: financeiroController),
                           ),
                         ),
-
                         const SizedBox(height: 40),
                       ],
                     );
@@ -409,19 +342,14 @@ class TelaFinanceiro extends StatelessWidget {
   // ===========================================================
   // CONTAINER PADRÃO
   // ===========================================================
-
   Widget _secao({required String titulo, required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-
       decoration: BoxDecoration(
         gradient: AppCores.gradienteCard,
-
         borderRadius: BorderRadius.circular(28),
-
         border: Border.all(color: AppCores.bordaEscura),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.35),
@@ -430,14 +358,11 @@ class TelaFinanceiro extends StatelessWidget {
           ),
         ],
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(titulo, style: tituloSecao),
-
           const SizedBox(height: 24),
-
           child,
         ],
       ),

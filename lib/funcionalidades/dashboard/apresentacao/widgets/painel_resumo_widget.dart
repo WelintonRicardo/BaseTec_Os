@@ -13,102 +13,189 @@ class PainelResumoWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // calcular estatísticas
-    final totalUsuarios = usuarios.length.toString();
-    final totalOS = ordensServico.length.toString();
-    final concluidas = ordensServico.where((os) => os['status'] == 'concluida').length.toString();
-    final canceladas = ordensServico.where((os) => os['status'] == 'cancelada').length.toString();
-    final pendentes = ordensServico.where((os) => os['status'] == 'pendente').length.toString();
-    final aguardandoPeca = ordensServico.where((os) => os['status'] == 'aguardando_peca').length.toString();
+    final totalUsuarios = usuarios.length;
 
-    final List<Map<String, String>> dados = [
-      {"titulo": "Usuários", "valor": totalUsuarios, "cor": "primaria"},
-      {"titulo": "Total OS", "valor": totalOS, "cor": "secundaria"},
-      {"titulo": "Concluídas", "valor": concluidas, "cor": "concluido"},
-      {"titulo": "Canceladas", "valor": canceladas, "cor": "cancelado"},
-      {"titulo": "Pendentes", "valor": pendentes, "cor": "pendente"},
-      {"titulo": "Aguardando Peça", "valor": aguardandoPeca, "cor": "ausente"},
+    int concluidas = 0;
+    int pendentes = 0;
+    int aguardandoPeca = 0;
+    int clienteAusente = 0;
+
+    for (final os in ordensServico) {
+      final status = (os['status'] ?? '').toString().trim().toLowerCase();
+
+
+      if (status == 'concluido' || status == 'concluida') {
+        concluidas++;
+      }
+
+      if (status == 'pendente') {
+        pendentes++;
+      }
+
+      if (status == 'aguardando_peca') {
+        aguardandoPeca++;
+      }
+
+      if (status == 'cliente ausente') {
+        clienteAusente++;
+      }
+    }
+
+    /// Total refletindo exatamente os cards
+    final totalOS = concluidas + pendentes + aguardandoPeca + clienteAusente;
+    final cards = [
+      _ResumoCard(
+        titulo: 'Usuários',
+        valor: totalUsuarios.toString(),
+        cor: AppCores.primaria,
+        icone: Icons.people_alt_rounded,
+      ),
+      _ResumoCard(
+        titulo: 'Total OS',
+        valor: totalOS.toString(),
+        cor: Colors.deepPurpleAccent,
+        icone: Icons.assignment_rounded,
+      ),
+      _ResumoCard(
+        titulo: 'Concluídas',
+        valor: concluidas.toString(),
+        cor: AppCores.concluido,
+        icone: Icons.check_circle_rounded,
+      ),
+
+      _ResumoCard(
+        titulo: 'Pendentes',
+        valor: pendentes.toString(),
+        cor: AppCores.pendente,
+        icone: Icons.schedule_rounded,
+      ),
+      _ResumoCard(
+        titulo: 'Aguardando Peça',
+        valor: aguardandoPeca.toString(),
+        cor: Colors.indigoAccent,
+        icone: Icons.hourglass_top_rounded,
+      ),
+      _ResumoCard(
+        titulo: 'Cliente Ausente',
+        valor: clienteAusente.toString(),
+        cor: Colors.orangeAccent,
+        icone: Icons.person_off_rounded,
+      ),
     ];
 
-    // Responsividade
     final largura = MediaQuery.of(context).size.width;
-    int crossAxisCount = 2; // mobile
-    if (largura >= 600 && largura < 1024) {
-      crossAxisCount = 3; // tablet
-    } else if (largura >= 1024) {
-      crossAxisCount = 6; // desktop
+
+    int colunas = 2;
+
+    if (largura > 700) {
+      colunas = 3;
+    }
+
+    if (largura > 1200) {
+      colunas = 6;
     }
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      itemCount: cards.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 2, // ✅ mais alto (cards maiores)
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
+        crossAxisCount: colunas,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.85,
       ),
-      itemCount: dados.length,
       itemBuilder: (context, index) {
-        final item = dados[index];
-        return _cardResumo(item["titulo"]!, item["valor"]!, _mapCor(item["cor"]!));
+        return cards[index];
       },
     );
   }
+}
 
-  Color _mapCor(String cor) {
-    switch (cor) {
-      case "primaria":
-        return AppCores.primaria;
-      case "secundaria":
-        return AppCores.secundaria;
-      case "concluido":
-        return AppCores.concluido;
-      case "cancelado":
-        return AppCores.cancelado;
-      case "pendente":
-        return AppCores.pendente;
-      case "ausente":
-        return AppCores.ausente;
-      default:
-        return AppCores.textoBranco;
-    }
-  }
+class _ResumoCard extends StatelessWidget {
+  final String titulo;
+  final String valor;
+  final Color cor;
+  final IconData icone;
 
-  Widget _cardResumo(String titulo, String valor, Color cor) {
-    return InkWell( // ✅ já preparado para ser tocável
-      onTap: () {
-        // ação futura aqui
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14), // ✅ mais espaçamento
-        decoration: BoxDecoration(
-          color: AppCores.cardEscuro,
-          borderRadius: BorderRadius.circular(12),
+  const _ResumoCard({
+    required this.titulo,
+    required this.valor,
+    required this.cor,
+    required this.icone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppCores.cardEscuro, AppCores.cardEscuro.withOpacity(0.85)],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              valor,
-              style: TextStyle(
-                color: cor,
-                fontSize: 18, // ✅ fonte maior
-                fontWeight: FontWeight.bold,
-              ),
+        border: Border.all(color: cor.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: cor.withOpacity(0.15),
+            blurRadius: 25,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: cor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 6),
-            Text(
-              titulo,
-              style: const TextStyle(
-                color: AppCores.textoBranco,
-                fontSize: 12, // ✅ fonte maior
-              ),
-              textAlign: TextAlign.center,
+            child: Icon(icone, color: cor, size: 28),
+          ),
+
+          const SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  valor,
+                  style: TextStyle(
+                    color: cor,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  titulo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppCores.textoBranco,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                const SizedBox(height: 2),
+
+                const Text(
+                  'Neste mês',
+                  style: TextStyle(color: AppCores.textoCinza, fontSize: 11),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

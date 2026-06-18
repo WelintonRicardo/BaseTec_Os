@@ -1,30 +1,21 @@
-<!DOCTYPE html><html lang="pt-BR"><head>
-  <!-- Base Flutter -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
   <base href="$FLUTTER_BASE_HREF">
 
-  <!-- Charset e compatibilidade -->
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
 
-  <!-- Responsividade -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- SEO -->
   <title>BaseTec OS</title>
 
   <meta name="description" content="Sistema profissional de ordens de serviço BaseTec OS">
 
-  <meta name="keywords" content="ordem de serviço, assistência técnica, técnicos, gestão OS, sistema técnico">
-
-  <meta name="author" content="BaseTec">
-
-  <!-- Performance e cache -->
-  <meta http-equiv="Cache-Control" content="public, max-age=31536000">
-
-  <!-- Tema -->
   <meta name="theme-color" content="#0A84FF">
 
-  <!-- PWA -->
   <meta name="mobile-web-app-capable" content="yes">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,141 +24,123 @@
 
   <meta name="apple-mobile-web-app-title" content="BaseTec OS">
 
-  <!-- Ícones -->
+  <link rel="manifest" href="manifest.json">
+
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <!-- Manifest -->
-  <link rel="manifest" href="manifest.json">
-
-  <!-- Pré carregamento -->
   <link rel="preload" href="flutter_bootstrap.js" as="script">
 
-  <!-- Splash background -->
   <style>
     html,
     body {
-      background-color: #ffffff;
-      margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
+      background: #f5f7fb;
+      font-family: Arial, Helvetica, sans-serif;
     }
 
-    body {
+    #loader {
+      position: fixed;
+      inset: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-family: Arial, sans-serif;
-    }
-
-    .loading {
-      display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 16px;
+      gap: 20px;
+      background: #f5f7fb;
+      z-index: 999999;
     }
 
-    .loading img {
-      width: 120px;
-      height: 120px;
+    #loader img {
+      width: 140px;
+      height: 140px;
       object-fit: contain;
+      animation: pulse 1.8s infinite ease-in-out;
     }
 
-    .loading-text {
-      color: #0A84FF;
+    .loader-text {
       font-size: 18px;
       font-weight: 600;
+      color: #0A84FF;
+      letter-spacing: 0.3px;
+    }
+
+    .progress-container {
+      width: 240px;
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(10, 132, 255, .15);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 40%;
+      border-radius: 999px;
+      background: #0A84FF;
+      animation: loading 1.2s infinite ease-in-out;
+    }
+
+    @keyframes loading {
+      0% {
+        margin-left: -40%;
+      }
+
+      100% {
+        margin-left: 100%;
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.04);
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
   </style>
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
 
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #ffffff;
-          background-size: 100% 100%;
-    }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-  </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
-  </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
 
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
 
-  <!-- Splash Screen -->
-  <div class="loading">
-    <img src="icons/Icon-192.png" alt="BaseTec OS Logo">
-    <div class="loading-text">
+  <div id="loader">
+
+    <img src="icons/Icon-192.png" alt="BaseTec OS">
+
+    <div class="loader-text">
       Carregando BaseTec OS...
     </div>
+
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+
   </div>
 
-  <!-- Flutter -->
-  <script src="flutter_bootstrap.js" async=""></script>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      const loader = document.getElementById('loader');
 
+      if (loader) {
+        loader.remove();
+      }
+    });
+  </script>
 
+  <script src="flutter_bootstrap.js" async></script>
 
-</body></html>
+</body>
+
+</html>

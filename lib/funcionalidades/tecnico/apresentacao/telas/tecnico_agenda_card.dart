@@ -20,7 +20,6 @@ import '../../../../compartilhado/tema_cores.dart';
 /// ======================================================
 
 class TecnicoAgendaCard extends StatefulWidget {
-
   final DateTime selectedDate;
 
   final Function(DateTime) onDateSelected;
@@ -36,22 +35,19 @@ class TecnicoAgendaCard extends StatefulWidget {
   });
 
   @override
-  State<TecnicoAgendaCard> createState() =>
-      _TecnicoAgendaCardState();
+  State<TecnicoAgendaCard> createState() => _TecnicoAgendaCardState();
 }
 
-class _TecnicoAgendaCardState
-    extends State<TecnicoAgendaCard> {
-
+class _TecnicoAgendaCardState extends State<TecnicoAgendaCard> {
   /// Cliente Supabase
-  final SupabaseClient supabase =
-      Supabase.instance.client;
+  final SupabaseClient supabase = Supabase.instance.client;
 
   /// Data inicial mostrada
   late DateTime _startDate;
 
   /// Quantidade de OS por dia
   final Map<String, int> _quantidadeOS = {};
+  static const int diasHistorico = 365;
 
   /// Loading
   bool _loading = true;
@@ -60,7 +56,11 @@ class _TecnicoAgendaCardState
   void initState() {
     super.initState();
 
-    _startDate = widget.selectedDate;
+    _startDate = DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+      widget.selectedDate.day,
+    );
 
     carregarQuantidadeOS();
   }
@@ -69,15 +69,12 @@ class _TecnicoAgendaCardState
   /// BUSCA QUANTIDADE DE OS DOS PRÓXIMOS 5 DIAS
   /// ======================================================
   Future<void> carregarQuantidadeOS() async {
-
     try {
-
       setState(() {
         _loading = true;
       });
 
-      final user =
-          supabase.auth.currentUser;
+      final user = supabase.auth.currentUser;
 
       if (user == null) return;
 
@@ -90,65 +87,41 @@ class _TecnicoAgendaCardState
 
       if (tecnico == null) return;
 
-      final tecnicoId =
-          tecnico['id'];
+      final tecnicoId = tecnico['id'];
 
       final Map<String, int> temp = {};
 
       /// Percorre os 5 dias
       for (int i = 0; i < 5; i++) {
+        final dia = _startDate.add(Duration(days: i));
 
-        final dia =
-            _startDate.add(
-          Duration(days: i),
-        );
+        final inicioDia = DateTime(dia.year, dia.month, dia.day);
 
-        final inicioDia = DateTime(
-          dia.year,
-          dia.month,
-          dia.day,
-        );
-
-        final fimDia =
-            inicioDia.add(
-          const Duration(days: 1),
-        );
+        final fimDia = inicioDia.add(const Duration(days: 1));
 
         /// Busca OS do dia
         final response = await supabase
             .from('ordens_servico')
             .select('id')
             .eq('tecnico_id', tecnicoId)
-            .gte(
-              'janela_inicio_agendada',
-              inicioDia.toIso8601String(),
-            )
-            .lt(
-              'janela_inicio_agendada',
-              fimDia.toIso8601String(),
-            );
+            .gte('janela_inicio_agendada', inicioDia.toIso8601String())
+            .lt('janela_inicio_agendada', fimDia.toIso8601String());
 
-        final chave =
-            '${dia.day}-${dia.month}-${dia.year}';
+        final chave = '${dia.day}-${dia.month}-${dia.year}';
 
-        temp[chave] =
-            response.length;
+        temp[chave] = response.length;
       }
 
       if (!mounted) return;
 
       setState(() {
-
         _quantidadeOS.clear();
 
         _quantidadeOS.addAll(temp);
 
         _loading = false;
       });
-
     } catch (e) {
-
-
       if (!mounted) return;
 
       setState(() {
@@ -161,13 +134,8 @@ class _TecnicoAgendaCardState
   /// AVANÇAR 5 DIAS
   /// ======================================================
   void _nextDays() {
-
     setState(() {
-
-      _startDate =
-          _startDate.add(
-        const Duration(days: 5),
-      );
+      _startDate = _startDate.add(const Duration(days: 5));
     });
 
     carregarQuantidadeOS();
@@ -177,27 +145,8 @@ class _TecnicoAgendaCardState
   /// VOLTAR 5 DIAS
   /// ======================================================
   void _previousDays() {
-
     setState(() {
-
-      final prev =
-          _startDate.subtract(
-        const Duration(days: 5),
-      );
-
-      /// Não deixa voltar antes
-      /// da data de cadastro
-      if (prev.isBefore(
-        widget.dataCadastro,
-      )) {
-
-        _startDate =
-            widget.dataCadastro;
-
-      } else {
-
-        _startDate = prev;
-      }
+      _startDate = _startDate.subtract(const Duration(days: 5));
     });
 
     carregarQuantidadeOS();
@@ -207,34 +156,22 @@ class _TecnicoAgendaCardState
   /// SELECIONAR DATA
   /// ======================================================
   Future<void> _selectDate() async {
-
-    final picked =
-        await showDatePicker(
-
+    final picked = await showDatePicker(
       context: context,
 
-      initialDate:
-          widget.selectedDate,
+      initialDate: widget.selectedDate,
 
-      firstDate:
-          widget.dataCadastro,
+      firstDate: DateTime.now().subtract(const Duration(days: diasHistorico)),
 
-      lastDate:
-          DateTime.now().add(
-        const Duration(days: 365),
-      ),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     if (picked != null) {
-
       setState(() {
-
         _startDate = picked;
       });
 
-      widget.onDateSelected(
-        picked,
-      );
+      widget.onDateSelected(picked);
 
       carregarQuantidadeOS();
     }
@@ -242,97 +179,92 @@ class _TecnicoAgendaCardState
 
   @override
   Widget build(BuildContext context) {
+    final days = List.generate(5, (i) => _startDate.add(Duration(days: i)));
+    String _nomeDiaSemana(DateTime data) {
+      const dias = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
-    final days = List.generate(
-      5,
-      (i) => _startDate.add(
-        Duration(days: i),
-      ),
-    );
+      return dias[data.weekday - 1];
+    }
+
+    String _nomeMes(DateTime data) {
+      const meses = [
+        'JAN',
+        'FEV',
+        'MAR',
+        'ABR',
+        'MAI',
+        'JUN',
+        'JUL',
+        'AGO',
+        'SET',
+        'OUT',
+        'NOV',
+        'DEZ',
+      ];
+
+      return meses[data.month - 1];
+    }
 
     return Container(
-
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
 
       decoration: BoxDecoration(
-
         color: AppCores.cardEscuro,
 
-        borderRadius:
-            BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18),
 
-        border: Border.all(
-          color:
-              AppCores.bordaEscura,
-        ),
+        border: Border.all(color: AppCores.bordaEscura),
       ),
 
       child: Column(
-
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
 
         children: [
-
           /// ==========================================
           /// HEADER
           /// ==========================================
           Row(
-
             children: [
-
               const Text(
-
                 "Agenda",
 
                 style: TextStyle(
-                  color:
-                      AppCores.textoBranco,
+                  color: AppCores.textoBranco,
                   fontSize: 18,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
 
               const Spacer(),
 
               IconButton(
-
                 icon: const Icon(
                   Icons.arrow_back_ios,
-                  color:
-                      AppCores.textoBranco,
+                  color: AppCores.textoBranco,
                   size: 18,
                 ),
 
-                onPressed:
-                    _previousDays,
+                onPressed: _previousDays,
               ),
 
               IconButton(
-
                 icon: const Icon(
                   Icons.calendar_today,
-                  color:
-                      AppCores.primaria,
+                  color: AppCores.primaria,
                   size: 20,
                 ),
 
-                onPressed:
-                    _selectDate,
+                onPressed: _selectDate,
               ),
 
               IconButton(
-
                 icon: const Icon(
                   Icons.arrow_forward_ios,
-                  color:
-                      AppCores.textoBranco,
+                  color: AppCores.textoBranco,
                   size: 18,
                 ),
 
-                onPressed:
-                    _nextDays,
+                onPressed: _nextDays,
               ),
             ],
           ),
@@ -343,153 +275,113 @@ class _TecnicoAgendaCardState
           /// LOADING
           /// ==========================================
           if (_loading)
-
-            const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
-
+            const Center(child: CircularProgressIndicator())
           else
-
             SizedBox(
-
-              height: 95,
+              height: 120,
 
               child: ListView.separated(
+                scrollDirection: Axis.horizontal,
 
-                scrollDirection:
-                    Axis.horizontal,
+                itemCount: days.length,
 
-                itemCount:
-                    days.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
 
-                separatorBuilder:
-                    (_, __) =>
-                        const SizedBox(
-                  width: 10,
-                ),
-
-                itemBuilder:
-                    (context, index) {
-
-                  final day =
-                      days[index];
+                itemBuilder: (context, index) {
+                  final day = days[index];
 
                   final isSelected =
-                      day.day ==
-                              widget
-                                  .selectedDate
-                                  .day &&
-                          day.month ==
-                              widget
-                                  .selectedDate
-                                  .month &&
-                          day.year ==
-                              widget
-                                  .selectedDate
-                                  .year;
+                      day.day == widget.selectedDate.day &&
+                      day.month == widget.selectedDate.month &&
+                      day.year == widget.selectedDate.year;
 
-                  final chave =
-                      '${day.day}-${day.month}-${day.year}';
+                  final chave = '${day.day}-${day.month}-${day.year}';
 
-                  final quantidade =
-                      _quantidadeOS[chave] ??
-                          0;
+                  final quantidade = _quantidadeOS[chave] ?? 0;
 
                   return GestureDetector(
-
                     onTap: () {
-
-                      widget
-                          .onDateSelected(
-                        day,
-                      );
+                      widget.onDateSelected(day);
 
                       setState(() {});
                     },
 
                     child: AnimatedContainer(
-
-                      duration:
-                          const Duration(
-                        milliseconds: 200,
-                      ),
+                      duration: const Duration(milliseconds: 200),
 
                       width: 80,
 
-                      padding:
-                          const EdgeInsets.all(
-                        10,
-                      ),
+                      padding: const EdgeInsets.all(10),
 
-                      decoration:
-                          BoxDecoration(
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppCores.primaria : Colors.white10,
 
-                        color: isSelected
-                            ? AppCores
-                                .primaria
-                            : Colors.white10,
-
-                        borderRadius:
-                            BorderRadius
-                                .circular(
-                          14,
-                        ),
+                        borderRadius: BorderRadius.circular(14),
 
                         border: Border.all(
                           color: isSelected
-                              ? AppCores
-                                  .primaria
-                              : Colors
-                                  .white12,
+                              ? AppCores.primaria
+                              : Colors.white12,
                         ),
                       ),
 
                       child: Column(
-
-                        mainAxisAlignment:
-                            MainAxisAlignment
-                                .center,
-
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-
-                          /// DATA
                           Text(
-
-                            '${day.day}/${day.month}',
-
+                            _nomeDiaSemana(day),
                             style: TextStyle(
-
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppCores
-                                      .textoBranco,
-
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-
-                              fontSize: 16,
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
 
-                          const SizedBox(
-                            height: 8,
-                          ),
+                          const SizedBox(height: 2),
 
-                          /// QUANTIDADE DE OS
                           Text(
-
-                            '$quantidade OS',
-
+                            '${day.day}',
                             style: TextStyle(
-
                               color: isSelected
                                   ? Colors.white
-                                  : AppCores
-                                      .textoCinza,
+                                  : AppCores.textoBranco,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
 
-                              fontSize: 12,
+                          Text(
+                            _nomeMes(day),
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white70
+                                  : AppCores.textoCinza,
+                              fontSize: 10,
+                            ),
+                          ),
+
+                          const SizedBox(height: 2),
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: quantidade > 0
+                                  ? Colors.green.withOpacity(.15)
+                                  : Colors.white10,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '$quantidade',
+                              style: TextStyle(
+                                color: quantidade > 0
+                                    ? Colors.greenAccent
+                                    : Colors.white54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],

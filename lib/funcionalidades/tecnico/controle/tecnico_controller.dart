@@ -1,26 +1,27 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../../compartilhado/dados/supabase_notifier.dart';
 import '../dados/repositorios/tecnico_repository.dart';
 
 class TecnicoController extends ChangeNotifier {
+  final SupabaseNotifier notifier = SupabaseNotifier();
 
-  final SupabaseNotifier notifier =
-    SupabaseNotifier();
+  final TecnicoRepository repository = TecnicoRepository();
 
-StreamSubscription? _osSubscription;
+  final SupabaseClient supabase = Supabase.instance.client;
 
-  final TecnicoRepository repository =
-      TecnicoRepository();
+  StreamSubscription? _osSubscription;
+  StreamSubscription? _execucaoSubscription;
 
-  final SupabaseClient supabase =
-      Supabase.instance.client;
+  bool _realtimeIniciado = false;
+  bool _disposed = false;
 
   bool loading = true;
 
-  DateTime selectedDate =
-      DateTime.now();
+  DateTime selectedDate = DateTime.now();
 
   DateTime? dataCadastro;
 
@@ -33,30 +34,25 @@ StreamSubscription? _osSubscription;
   // =====================================================
 
   Future<void> inicializar() async {
-
     loading = true;
 
-    notifyListeners();
+    _safeNotify();
 
     try {
-
       await carregarTecnico();
 
-      await carregarOS(
-        selectedDate,
-      );
+      await carregarOS(selectedDate);
 
+      if (!_realtimeIniciado) {
+        iniciarRealtime();
+        _realtimeIniciado = true;
+      }
     } catch (e) {
-
-      print(
-        'ERRO INIT TECNICO: $e',
-      );
-
+      debugPrint('ERRO INIT TECNICO: $e');
     } finally {
-
       loading = false;
 
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -65,40 +61,24 @@ StreamSubscription? _osSubscription;
   // =====================================================
 
   Future<void> carregarTecnico() async {
-
     try {
+      final user = supabase.auth.currentUser;
 
-      final user =
-          supabase.auth.currentUser;
+      if (user == null) return;
 
-      if (user == null) {
-        return;
-      }
+      final tecnico = await repository.buscarTecnicoLogado();
 
-      final tecnico =
-      await repository
-        .buscarTecnicoLogado();
-
-      if (tecnico == null) {
-        return;
-      }
+      if (tecnico == null) return;
 
       dadosTecnico = tecnico;
 
-      dataCadastro =
-          DateTime.tryParse(
-        tecnico['data_cadastro']
-                ?.toString() ??
-            '',
+      dataCadastro = DateTime.tryParse(
+        tecnico['data_cadastro']?.toString() ?? '',
       );
 
-      notifyListeners();
-
+      _safeNotify();
     } catch (e) {
-
-      print(
-        'ERRO CARREGAR TECNICO: $e',
-      );
+      debugPrint('ERRO CARREGAR TECNICO: $e');
     }
   }
 
@@ -106,50 +86,20 @@ StreamSubscription? _osSubscription;
   // CARREGAR OS
   // =====================================================
 
-  Future<void> carregarOS(
-    DateTime date,
-  ) async {
-
+  Future<void> carregarOS(DateTime date) async {
     try {
+      if (dadosTecnico == null) return;
 
-      if (dadosTecnico == null) {
-        return;
-      }
+      final tecnicoId = dadosTecnico!['id'].toString();
 
-      final tecnicoId =
-          dadosTecnico!['id']
-              .toString();
-
-      final empresaId =
-          dadosTecnico!['empresa_id']
-              .toString();
-
-      final inicioDia = DateTime(
-        date.year,
-        date.month,
-        date.day,
-      );
-
-      final fimDia =
-          inicioDia.add(
-        const Duration(days: 1),
-      );
-
-      osList =
-          await repository
-              .buscarOSDoTecnico(
+      osList = await repository.buscarOSDoTecnico(
         tecnicoId: tecnicoId,
-       
-        data: selectedDate,
+        data: date,
       );
 
-      notifyListeners();
-
+      _safeNotify();
     } catch (e) {
-
-      print(
-        'ERRO CARREGAR OS: $e',
-      );
+      debugPrint('ERRO CARREGAR OS: $e');
     }
   }
 
@@ -157,50 +107,117 @@ StreamSubscription? _osSubscription;
   // ALTERAR DATA
   // =====================================================
 
-  Future<void> alterarData(
-    DateTime date,
-  ) async {
-
+  Future<void> alterarData(DateTime date) async {
     selectedDate = date;
 
-    notifyListeners();
+    _safeNotify();
 
     await carregarOS(date);
   }
 
   // =====================================================
-  // CONTADORES
-  // =====================================================
-
-  int contarStatus(
-    String status,
-  ) {
-    return osList.where((os) {
-
-      return os['status']
-              ?.toString()
-              .toLowerCase() ==
-          status.toLowerCase();
-
-    }).length;
-  }
-
-  // =====================================================
-// REALTIME
+// CONTADORES
 // =====================================================
 
-void iniciarRealtime() {
+int contarStatus(String status) {
+  final statusFiltro =
+      status.trim().toLowerCase();
 
-  _osSubscription?.cancel();
+  return osList.where((os) {
+    final statusOs =
+        os['status']
+            ?.toString()
+            .trim()
+            .toLowerCase() ??
+        '';
 
-  _osSubscription =
-      notifier
-          .onOrdensServicoChange()
-          .listen((event) async {
+    switch (statusFiltro) {
+      case 'concluida':
+      case 'concluido':
+        return statusOs == 'concluida' ||
+            statusOs == 'concluido';
 
+      case 'em_execucao':
+      case 'agendada':
+        return statusOs == 'em_execucao' ||
+            statusOs == 'agendada';
+
+      case 'aguardando_peca':
+        return statusOs == 'aguardando_peca';
+
+      case 'retorno':
+        return statusOs == 'retorno';
+
+      case 'cancelada':
+        return statusOs == 'cancelada';
+
+      case 'pendente':
+        return statusOs == 'pendente';
+
+      default:
+        return statusOs == statusFiltro;
+    }
+  }).length;
+}
+
+  // =====================================================
+  // REALTIME
+  // =====================================================
+
+  void iniciarRealtime() {
+    _osSubscription?.cancel();
+    _execucaoSubscription?.cancel();
+
+    _osSubscription =
+        notifier.onOrdensServicoChange().listen(
+      (event) async {
+        await _processarEvento(event);
+      },
+    );
+
+    _execucaoSubscription =
+        notifier.onExecucoesOSChange().listen(
+      (event) async {
+        await _processarEvento(event);
+      },
+    );
+  }
+
+  Future<void> _processarEvento(
+    Map<String, dynamic> event,
+  ) async {
+    if (dadosTecnico == null) return;
+
+    final novo = event['new'] ?? {};
+    final antigo = event['old'] ?? {};
+
+    final tecnicoEvento =
+        novo['tecnico_id'] ??
+        antigo['tecnico_id'];
+
+    if (tecnicoEvento == null) return;
+
+    if (tecnicoEvento.toString() !=
+        dadosTecnico!['id'].toString()) {
+      return;
+    }
 
     await carregarOS(selectedDate);
+  }
 
-  });
-}
+  void _safeNotify() {
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+
+    _osSubscription?.cancel();
+    _execucaoSubscription?.cancel();
+
+    super.dispose();
+  }
 }

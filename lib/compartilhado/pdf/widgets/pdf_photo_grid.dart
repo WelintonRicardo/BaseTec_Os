@@ -13,7 +13,6 @@ class PdfPhotoGrid {
 
   static pw.Widget build({
     required PdfTemplateType template,
-
     required List<Uint8List> fotos,
   }) {
     final bool isDark = template == PdfTemplateType.dark;
@@ -26,50 +25,75 @@ class PdfPhotoGrid {
         ? PdfThemeConfig.darkCard
         : PdfThemeConfig.cleanCard;
 
-    if (fotos.isEmpty) {
-      return pw.Container(
-        height: 120,
-
-        alignment: pw.Alignment.center,
-
-        decoration: pw.BoxDecoration(
-          color: background,
-
-          borderRadius: pw.BorderRadius.circular(18),
-
-          border: pw.Border.all(color: border),
-        ),
-
-        child: pw.Text('Nenhuma foto adicionada'),
-      );
-    }
-
-    return pw.Wrap(
-      spacing: 12,
-
-      runSpacing: 12,
-
-      children: fotos.map((foto) {
-        return pw.Container(
-          width: 240,
-
-          height: 180,
-
-          decoration: pw.BoxDecoration(
-            borderRadius: pw.BorderRadius.circular(14),
-
-            border: pw.Border.all(color: border),
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: background,
+        borderRadius: pw.BorderRadius.circular(18),
+        border: pw.Border.all(color: border),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(
+            child: pw.Column(
+              children: [
+                pw.Text(
+                  'FOTO INICIAL',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                fotos.isNotEmpty
+                    ? pw.Container(
+                        height: 180,
+                        child: pw.Image(
+                          pw.MemoryImage(fotos[0]),
+                          fit: pw.BoxFit.cover,
+                        ),
+                      )
+                    : pw.Container(
+                        height: 180,
+                        alignment: pw.Alignment.center,
+                        child: pw.Text('Sem foto'),
+                      ),
+              ],
+            ),
           ),
 
-          child: pw.ClipRRect(
-            horizontalRadius: 14,
+          pw.SizedBox(width: 20),
 
-            verticalRadius: 14,
-
-            child: pw.Image(pw.MemoryImage(foto), fit: pw.BoxFit.cover),
+          pw.Expanded(
+            child: pw.Column(
+              children: [
+                pw.Text(
+                  'FOTO FINAL',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                fotos.length > 1
+                    ? pw.Container(
+                        height: 180,
+                        child: pw.Image(
+                          pw.MemoryImage(fotos[1]),
+                          fit: pw.BoxFit.cover,
+                        ),
+                      )
+                    : pw.Container(
+                        height: 180,
+                        alignment: pw.Alignment.center,
+                        child: pw.Text('Sem foto'),
+                      ),
+              ],
+            ),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 }

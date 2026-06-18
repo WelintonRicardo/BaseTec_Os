@@ -42,32 +42,100 @@ class RepositorioOS {
   }
 
   Future<String> enviarFoto(
-    String osId,
-    File arquivo,
-    String tipo,
-  ) async {
-    final nomeArquivo =
-        '${tipo}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  String osId,
+  File arquivo,
+  String tipo,
+) async {
+  final nomeArquivo =
+      '${tipo}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    final caminho = '$osId/$nomeArquivo';
+  final caminho = '$osId/$nomeArquivo';
 
-    // Upload da foto
-    await _supabase.storage
-        .from('fotos_os')
-        .upload(caminho, arquivo);
+  // ==========================================
+  // UPLOAD STORAGE
+  // ==========================================
 
-    // URL pública
-    final urlPublica = _supabase.storage
-        .from('fotos_os')
-        .getPublicUrl(caminho);
+  await _supabase.storage
+      .from('fotos_os')
+      .upload(
+        caminho,
+        arquivo,
+        fileOptions: const FileOptions(
+          upsert: true,
+        ),
+      );
 
-    // Salva referência
-    await _supabase.from('midias_os').insert({
-      'os_id': osId,
-      'url_foto': urlPublica,
-      'tipo': tipo,
-    });
+  final urlPublica = _supabase.storage
+      .from('fotos_os')
+      .getPublicUrl(caminho);
 
-    return urlPublica;
+  print('================================');
+  print('FOTO ENVIADA');
+  print(urlPublica);
+  print('================================');
+
+  // ==========================================
+  // BUSCA EXECUÇÃO MAIS RECENTE
+  // ==========================================
+
+  final execucao = await _supabase
+      .from('execucoes_os')
+      .select('id')
+      .eq('ordem_servico_id', int.parse(osId))
+      .order(
+        'criado_em',
+        ascending: false,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  print('================================');
+  print('EXECUCAO');
+  print(execucao);
+  print('================================');
+
+  if (execucao != null) {
+    print('================================');
+    print('EXECUCAO ENCONTRADA');
+    print(execucao['id']);
+    print('TIPO FOTO: $tipo');
+    print('================================');
+
+    if (tipo == 'inicio') {
+      await _supabase
+          .from('execucoes_os')
+          .update({
+            'foto_inicio': urlPublica,
+          })
+          .eq(
+            'id',
+            execucao['id'],
+          );
+
+      print('FOTO INICIO SALVA');
+    }
+
+    if (tipo == 'fim') {
+      await _supabase
+          .from('execucoes_os')
+          .update({
+            'foto_fim': urlPublica,
+          })
+          .eq(
+            'id',
+            execucao['id'],
+          );
+
+      print('FOTO FIM SALVA');
+    }
+  } else {
+    print('================================');
+    print('NENHUMA EXECUCAO ENCONTRADA');
+    print('OS ID: $osId');
+    print('================================');
   }
+
+  return urlPublica;
+}
+
 }

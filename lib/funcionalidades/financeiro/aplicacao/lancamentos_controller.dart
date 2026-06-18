@@ -6,10 +6,17 @@ class LancamentosController {
   // =========================================================
   // LISTA PRINCIPAL
   // =========================================================
+  static final LancamentosController _instance =
+      LancamentosController._internal();
 
-  final List<LancamentoModel> _lancamentos = [];
+  factory LancamentosController() {
+    return _instance;
+  }
+
+  LancamentosController._internal();
 
   List<LancamentoModel> get lancamentos => List.unmodifiable(_lancamentos);
+  final List<LancamentoModel> _lancamentos = [];
 
   // =========================================================
   // CRUD

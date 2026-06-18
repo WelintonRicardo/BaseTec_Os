@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
@@ -51,6 +51,10 @@ class _TelaExecucaoOSState extends State<TelaExecucaoOS> {
   File? fotoInicio;
   File? fotoFim;
 
+  // URLs usadas principalmente no Web
+String? fotoInicioUrl;
+String? fotoFimUrl;
+
   final assinaturaClienteController = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.white,
@@ -96,38 +100,78 @@ class _TelaExecucaoOSState extends State<TelaExecucaoOS> {
   // FOTO
   // =========================================================
   Future<void> capturarFotoInicio() async {
-    try {
-      final imagem = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 70,
+  try {
+    final imagem = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+    );
+
+    if (imagem == null) return;
+
+    if (kIsWeb) {
+      final bytes = await imagem.readAsBytes();
+
+      await salvarFotoWeb(
+        bytes: bytes,
+        coluna: 'foto_inicio',
+        tipo: 'inicio',
       );
-      if (imagem == null) return;
+    } else {
       final arquivo = File(imagem.path);
+
       setState(() {
         fotoInicio = arquivo;
       });
-      await salvarFoto(arquivo: arquivo, coluna: 'foto_inicio', tipo: 'inicio');
-    } catch (e) {
-      mostrarErro('Erro ao capturar foto inicial: $e');
+
+      await salvarFotoMobile(
+        arquivo: arquivo,
+        coluna: 'foto_inicio',
+        tipo: 'inicio',
+      );
     }
+  } catch (e) {
+    mostrarErro(
+      'Erro ao capturar foto inicial: $e',
+    );
   }
+}
 
   Future<void> capturarFotoFim() async {
-    try {
-      final imagem = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 70,
+  try {
+    final imagem = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+    );
+
+    if (imagem == null) return;
+
+    if (kIsWeb) {
+      final bytes = await imagem.readAsBytes();
+
+      await salvarFotoWeb(
+        bytes: bytes,
+        coluna: 'foto_fim',
+        tipo: 'fim',
       );
-      if (imagem == null) return;
+    } else {
       final arquivo = File(imagem.path);
+
       setState(() {
         fotoFim = arquivo;
       });
-      await salvarFoto(arquivo: arquivo, coluna: 'foto_fim', tipo: 'fim');
-    } catch (e) {
-      mostrarErro('Erro ao capturar foto final: $e');
+
+      await salvarFotoMobile(
+        arquivo: arquivo,
+        coluna: 'foto_fim',
+        tipo: 'fim',
+      );
     }
+  } catch (e) {
+    mostrarErro(
+      'Erro ao capturar foto final: $e',
+    );
   }
+}
 
   Future<void> salvarFoto({
     required File arquivo,
@@ -135,22 +179,144 @@ class _TelaExecucaoOSState extends State<TelaExecucaoOS> {
     required String tipo,
   }) async {
     try {
+      print('================================');
+      print('SALVANDO FOTO');
+      print('TIPO: $tipo');
+      print('EXECUCAO: ${widget.execucaoId}');
+      print('================================');
+
       final path =
           'execucoes/${widget.execucaoId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       await supabase.storage
           .from('execucoes-os')
           .upload(path, arquivo, fileOptions: const FileOptions(upsert: true));
+
       final url = supabase.storage.from('execucoes-os').getPublicUrl(path);
-      await supabase
+
+      print('URL GERADA');
+      print(url);
+
+      final retorno = await supabase
           .from('execucoes_os')
           .update({coluna: url})
           .eq('id', widget.execucaoId)
           .select();
+
+      print('UPDATE EXECUTADO');
+      print(retorno);
+
+      final verificacao = await supabase
+          .from('execucoes_os')
+          .select('foto_inicio,foto_fim')
+          .eq('id', widget.execucaoId)
+          .single();
+
+      print('VERIFICACAO');
+      print(verificacao);
+
+      print('================================');
     } catch (e) {
+      print('ERRO AO SALVAR FOTO');
+      print(e);
+
       rethrow;
     }
   }
+Future<void> salvarFotoMobile({
+  required File arquivo,
+  required String coluna,
+  required String tipo,
+}) async {
+  try {
+    print('================================');
+    print('UPLOAD MOBILE');
+    print('TIPO: $tipo');
+    print('================================');
 
+    final path =
+        'execucoes/${widget.execucaoId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    await supabase.storage
+        .from('execucoes-os')
+        .upload(
+          path,
+          arquivo,
+          fileOptions: const FileOptions(
+            upsert: true,
+          ),
+        );
+
+    final url = supabase.storage
+        .from('execucoes-os')
+        .getPublicUrl(path);
+
+    await supabase
+        .from('execucoes_os')
+        .update({
+          coluna: url,
+        })
+        .eq(
+          'id',
+          widget.execucaoId,
+        );
+
+    print('FOTO SALVA MOBILE');
+    print(url);
+  } catch (e) {
+    print(e);
+    rethrow;
+  }
+}
+
+Future<void> salvarFotoWeb({
+  required Uint8List bytes,
+  required String coluna,
+  required String tipo,
+}) async {
+  try {
+    final path =
+        'execucoes/${widget.execucaoId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    await supabase.storage
+        .from('execucoes-os')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            upsert: true,
+          ),
+        );
+
+    final url = supabase.storage
+        .from('execucoes-os')
+        .getPublicUrl(path);
+
+    setState(() {
+      if (tipo == 'inicio') {
+        fotoInicioUrl = url;
+      } else {
+        fotoFimUrl = url;
+      }
+    });
+
+    await supabase
+        .from('execucoes_os')
+        .update({
+          coluna: url,
+        })
+        .eq(
+          'id',
+          widget.execucaoId,
+        );
+
+    print('FOTO SALVA WEB');
+    print(url);
+  } catch (e) {
+    print(e);
+    rethrow;
+  }
+}
   // =========================================================
   // ASSINATURA
   // =========================================================
@@ -285,11 +451,15 @@ class _TelaExecucaoOSState extends State<TelaExecucaoOS> {
             CardObservacaoFinal(controller: observacaoFinalController),
             const SizedBox(height: 20),
             CardFotos(
-              fotoInicio: fotoInicio,
-              fotoFim: fotoFim,
-              onCapturarFotoInicio: capturarFotoInicio,
-              onCapturarFotoFim: capturarFotoFim,
-            ),
+  fotoInicio: fotoInicio,
+  fotoFim: fotoFim,
+
+  fotoInicioUrl: fotoInicioUrl,
+  fotoFimUrl: fotoFimUrl,
+
+  onCapturarFotoInicio: capturarFotoInicio,
+  onCapturarFotoFim: capturarFotoFim,
+),
             const SizedBox(height: 20),
             CardStatus(
               reparoEfetuado: reparoEfetuado,
