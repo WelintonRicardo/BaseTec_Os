@@ -8,6 +8,7 @@ import '../../../../compartilhado/tema_cores.dart';
 import '../../../execucao_os/apresentacao/telas/tela_execucao_os.dart';
 import '../../../execucao_os/dados/repositorios/execucao_os_repository.dart';
 import '../../../cliente_ausente/apresentacao/telas/tela_cliente_ausente.dart';
+
 class TecnicoOSDetalhes extends StatelessWidget {
   final Map<String, dynamic> os;
 
@@ -17,18 +18,75 @@ class TecnicoOSDetalhes extends StatelessWidget {
   // ABRIR MAPA
   // =====================================================
 
-  Future<void> _abrirMapa(String endereco) async {
+  Future<void> _abrirMapa(BuildContext context, String endereco) async {
     final urlMaps = Uri.encodeFull(
       "https://www.google.com/maps/search/?api=1&query=$endereco",
     );
 
     final urlWaze = Uri.encodeFull("https://waze.com/ul?q=$endereco");
 
-    if (await canLaunchUrl(Uri.parse(urlWaze))) {
-      await launchUrl(Uri.parse(urlWaze), mode: LaunchMode.externalApplication);
-    } else {
-      await launchUrl(Uri.parse(urlMaps), mode: LaunchMode.externalApplication);
+    try {
+      // Atualiza status da OS para "em_deslocamento"
+      final osId = os['id'];
+      if (osId != null) {
+        await Supabase.instance.client
+            .from('ordens_servico')
+            .update({'status': 'em_deslocamento'})
+            .eq('id', osId);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Status atualizado para em deslocamento'),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Erro ao atualizar status: $e');
     }
+
+    // Exibe opções de mapa
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Image.asset(
+                  "assets/icons/google_maps.png",
+                  width: 32,
+                  height: 32,
+                ),
+                title: const Text("Abrir no Google Maps"),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final uri = Uri.parse(urlMaps);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              ListTile(
+                leading: Image.asset(
+                  "assets/icons/waze.png",
+                  width: 32,
+                  height: 32,
+                ),
+                title: const Text("Abrir no Waze"),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final uri = Uri.parse(urlWaze);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // =====================================================
@@ -277,7 +335,7 @@ class TecnicoOSDetalhes extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 48),
               ),
 
-              onPressed: () => _abrirMapa(enderecoCompleto),
+              onPressed: () => _abrirMapa(context, enderecoCompleto),
 
               icon: const Icon(Icons.map, color: AppCores.textoBranco),
 
@@ -341,51 +399,42 @@ class TecnicoOSDetalhes extends StatelessWidget {
             // CLIENTE AUSENTE
             // =================================================
             ElevatedButton.icon(
-  style: ElevatedButton.styleFrom(
-    backgroundColor: AppCores.ausente,
-    minimumSize: const Size(double.infinity, 48),
-  ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppCores.ausente,
+                minimumSize: const Size(double.infinity, 48),
+              ),
 
-  onPressed: () async {
-    final resultado = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TelaClienteAusente(
-          ordemServico: os,
-        ),
-      ),
-    );
+              onPressed: () async {
+                final resultado = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TelaClienteAusente(ordemServico: os),
+                  ),
+                );
 
-    if (resultado == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Cliente ausente registrado com sucesso.',
-          ),
-        ),
-      );
+                if (resultado == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Cliente ausente registrado com sucesso.'),
+                    ),
+                  );
 
-      // Futuramente:
-      // recarregar OS
-      // atualizar status
-      // atualizar lista
-    }
-  },
+                  // Futuramente:
+                  // recarregar OS
+                  // atualizar status
+                  // atualizar lista
+                }
+              },
 
-  icon: const Icon(
-    Icons.person_off,
-    color: AppCores.textoBranco,
-  ),
+              icon: const Icon(Icons.person_off, color: AppCores.textoBranco),
 
-  label: const Text(
-    "Cliente Ausente",
-    style: TextStyle(
-      color: AppCores.textoBranco,
-    ),
-  ),
-),
+              label: const Text(
+                "Cliente Ausente",
+                style: TextStyle(color: AppCores.textoBranco),
+              ),
+            ),
 
-const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // =================================================
             // INICIAR EXECUÇÃO
@@ -395,37 +444,29 @@ const SizedBox(height: 20),
                 backgroundColor: podeIniciar
                     ? AppCores.primaria
                     : Colors.grey.shade700,
-
                 minimumSize: const Size(double.infinity, 48),
               ),
-
               onPressed: podeIniciar
                   ? () async {
                       final confirmar = await showDialog<bool>(
                         context: context,
-
                         builder: (context) {
                           return AlertDialog(
                             title: const Text('Iniciar Execução'),
-
                             content: const Text(
                               'Deseja iniciar a execução desta OS agora?',
                             ),
-
                             actions: [
                               TextButton(
                                 onPressed: () {
                                   Navigator.pop(context, false);
                                 },
-
                                 child: const Text('Cancelar'),
                               ),
-
                               ElevatedButton(
                                 onPressed: () {
                                   Navigator.pop(context, true);
                                 },
-
                                 child: const Text('Iniciar'),
                               ),
                             ],
@@ -433,34 +474,29 @@ const SizedBox(height: 20),
                         },
                       );
 
-                      if (confirmar != true) {
-                        return;
-                      }
+                      if (confirmar != true) return;
 
                       try {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Iniciando execução...'),
+                            content: Text('Verificando execução...'),
                           ),
                         );
 
                         // =================================
                         // USER LOGADO
                         // =================================
-
                         final authUserId =
                             Supabase.instance.client.auth.currentUser!.id;
 
                         // =================================
                         // ID OS
                         // =================================
-
                         final ordemServicoId = os['id'];
 
                         // =================================
                         // BUSCAR TÉCNICO
                         // =================================
-
                         final tecnico = await Supabase.instance.client
                             .from('tecnicos')
                             .select('id')
@@ -469,23 +505,41 @@ const SizedBox(height: 20),
 
                         final tecnicoId = tecnico['id'];
 
-                        print('AUTH USER -> $authUserId');
+                        // =================================
+                        // VERIFICAR SE JÁ EXISTE EXECUÇÃO
+                        // =================================
+                        final execucaoExistente = await Supabase.instance.client
+                            .from('execucoes_os')
+                            .select()
+                            .eq('ordem_servico_id', ordemServicoId)
+                            .eq('status', 'em_execucao')
+                            .maybeSingle();
 
-                        print('TECNICO ID -> $tecnicoId');
+                        if (execucaoExistente != null) {
+                          // Já está em execução → apenas abre a tela
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TelaExecucaoOS(
+                                ordemServico: os,
+                                execucaoId: execucaoExistente['id'],
+                              ),
+                            ),
+                          );
+                          return;
+                        }
 
                         // =================================
-                        // REPOSITORY
+                        // SE NÃO EXISTE EXECUÇÃO, CRIA NOVA
                         // =================================
+                        await Supabase.instance.client
+                            .from('ordens_servico')
+                            .update({'status': 'em_execucao'})
+                            .eq('id', ordemServicoId);
 
                         final repository = ExecucaoOSRepository();
-
-                        // =================================
-                        // INICIAR EXECUÇÃO
-                        // =================================
-
                         final execucaoId = await repository.iniciarExecucao(
                           ordemServicoId: ordemServicoId,
-
                           tecnicoId: tecnicoId,
                         );
 
@@ -493,9 +547,7 @@ const SizedBox(height: 20),
                           throw Exception('Erro ao criar execução');
                         }
 
-                        if (!context.mounted) {
-                          return;
-                        }
+                        if (!context.mounted) return;
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -503,24 +555,17 @@ const SizedBox(height: 20),
                           ),
                         );
 
-                        // =================================
-                        // ABRIR TELA
-                        // =================================
-
                         Navigator.push(
                           context,
-
                           MaterialPageRoute(
                             builder: (_) => TelaExecucaoOS(
                               ordemServico: os,
-
                               execucaoId: execucaoId,
                             ),
                           ),
                         );
                       } catch (e) {
-                        print('ERRO INICIAR EXECUÇÃO: $e');
-
+                        debugPrint('ERRO INICIAR EXECUÇÃO: $e');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Erro ao iniciar execução: $e'),
@@ -529,16 +574,12 @@ const SizedBox(height: 20),
                       }
                     }
                   : null,
-
               icon: Icon(
                 podeIniciar ? Icons.play_arrow : Icons.lock,
-
                 color: AppCores.textoBranco,
               ),
-
               label: Text(
                 podeIniciar ? 'Iniciar Execução do Serviço' : 'OS Finalizada',
-
                 style: const TextStyle(color: AppCores.textoBranco),
               ),
             ),

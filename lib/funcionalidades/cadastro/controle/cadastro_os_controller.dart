@@ -16,7 +16,7 @@
 // Estrutura preparada para crescimento SaaS multiempresa.
 
 import 'dart:convert';
-
+import '../../../compartilhado/config/app_secrets.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,6 +27,7 @@ import '../../clientes/regras/cliente_sync_rule.dart';
 
 import '../../clientes/models/cliente_model.dart';
 import '../../clientes/services/cliente_service.dart';
+import '../../rota/services/geocoding_service.dart';
 
 class CadastroOsController extends ChangeNotifier {
   // =========================================================
@@ -474,6 +475,16 @@ class CadastroOsController extends ChangeNotifier {
 
       final clienteService = ClienteService();
 
+      final geo = await GeocodingService(apiKey: AppSecrets.googleMapsApiKey)
+          .buscarCoordenadas(
+            rua: ruaController.text,
+            numero: numeroController.text,
+            cidade: cidadeController.text,
+            estado: estadoController.text,
+            cep: cepController.text,
+          );
+
+
       final cliente = ClienteModel(
         empresaId: empresaId,
 
@@ -553,11 +564,68 @@ class CadastroOsController extends ChangeNotifier {
 
         'janela_fim_agendada': montarAgendamentoFim()?.toIso8601String(),
 
+        'latitude_local': geo?.latitude,
+        'longitude_local': geo?.longitude,
+
         // STATUS
         'status': 'pendente',
       };
 
-      await supabase.from('ordens_servico').insert(dados);
+      // =====================================================
+      // SALVAR OS
+      // =====================================================
+
+      final osCriada = await supabase
+          .from('ordens_servico')
+          .insert(dados)
+          .select()
+          .single();
+
+      final osId = osCriada['id'] as int;
+
+      // =====================================================
+      // GERAR ROTA AUTOMÁTICA
+      // =====================================================
+
+      // usa a data do agendamento
+      final dataRota = dataAgendamento == null
+          ? DateTime.now()
+          : DateTime(
+              dataAgendamento!.year,
+              dataAgendamento!.month,
+              dataAgendamento!.day,
+            );
+
+      // busca a última posição da rota
+      final ultimaRota = await supabase
+          .from('rotas')
+          .select('ordem_rota')
+          .eq('tecnico_id', tecnicoId)
+          .eq('data_rota', dataRota.toIso8601String().split('T')[0])
+          .order('ordem_rota', ascending: false)
+          .limit(1);
+
+      int proximaOrdem = 1;
+
+      if (ultimaRota.isNotEmpty) {
+        proximaOrdem = (ultimaRota.first['ordem_rota'] ?? 0) + 1;
+      }
+
+      // cria o registro da rota
+      await supabase.from('rotas').insert({
+        'tecnico_id': tecnicoId,
+        'os_id': osId,
+        'data_rota': dataRota.toIso8601String().split('T')[0],
+        'ordem_rota': proximaOrdem,
+        'ordem_original': proximaOrdem,
+        'otimizada': false,
+      });
+
+      // atualiza a OS com a posição da rota
+      await supabase
+          .from('ordens_servico')
+          .update({'ordem_rota': proximaOrdem})
+          .eq('id', osId);
 
       isLoading = false;
 

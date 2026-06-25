@@ -55,6 +55,8 @@ flutter:
     - assets/images/
     - assets/logo_basetec_full.png
     - assets/fonts/
+    - assets/icons/Google_Maps.png
+    - assets/icons/Waze.png
 
   fonts:
     - family: Roboto

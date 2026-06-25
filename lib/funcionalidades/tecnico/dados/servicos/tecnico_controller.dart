@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../compartilhado/regras/regras_acesso.dart';
+import '../../../../compartilhado/config/app_secrets.dart';
+import '../../../rota/services/geocoding_service.dart';
+
 
 class TecnicoController {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -8,6 +11,7 @@ class TecnicoController {
   final ValueNotifier<bool> loading = ValueNotifier(false);
   final ValueNotifier<String?> error = ValueNotifier(null);
   final ValueNotifier<bool> success = ValueNotifier(false);
+  
 
   // =========================
   // VALIDAÇÕES
@@ -57,6 +61,7 @@ class TecnicoController {
     required String cpfRg,
     String? telefone,
     String? cidade,
+    String? estado,
     String? rua,
     String? numero,
     String? complemento,
@@ -127,6 +132,33 @@ class TecnicoController {
 
       final empresaId = perfil['empresa_id'];
       // =================================
+      // GEOCODING RESIDÊNCIA
+      // =================================
+
+      double? latitudeResidencia;
+      double? longitudeResidencia;
+
+      if ((rua ?? '').isNotEmpty &&
+          (numero ?? '').isNotEmpty &&
+          (cidade ?? '').isNotEmpty &&
+          (estado ?? '').isNotEmpty) {
+        final geo = await GeocodingService(apiKey: AppSecrets.googleMapsApiKey)
+            .buscarCoordenadas(
+              rua: rua!,
+              numero: numero!,
+              cidade: cidade!,
+              estado: estado!,
+            );
+
+        latitudeResidencia = geo?.latitude;
+        longitudeResidencia = geo?.longitude;
+
+        debugPrint(
+          'RESIDENCIA TECNICO -> '
+          '$latitudeResidencia , $longitudeResidencia',
+        );
+      }
+      // =================================
       // CRIAR USUÁRIO AUTH DO TÉCNICO
       // =================================
 
@@ -138,9 +170,7 @@ class TecnicoController {
       final tecnicoUser = authRes.user;
 
       if (tecnicoUser == null) {
-        throw Exception(
-          "Não foi possível criar usuário do técnico.",
-        );
+        throw Exception("Não foi possível criar usuário do técnico.");
       }
 
       // =================================
@@ -148,22 +178,23 @@ class TecnicoController {
       // =================================
 
       await _supabase.from('tecnicos').insert({
-        // UUID próprio do técnico
         'user_id': tecnicoUser.id,
 
         'nome': nome,
         'email': email,
         'cpf_rg': cpfRg,
         'telefone': telefone,
+
         'cidade': cidade,
         'rua': rua,
         'numero': numero,
         'complemento': complemento,
 
-        // vínculo empresa
+        'latitude_residencia': latitudeResidencia,
+        'longitude_residencia': longitudeResidencia,
+
         'empresa_id': empresaId,
 
-        // acesso
         'acesso': NivelAcesso.tecnico.name.toUpperCase(),
       });
 
@@ -173,6 +204,34 @@ class TecnicoController {
     } finally {
       loading.value = false;
     }
+  }
+
+  Future<void> atualizarCoordenadasWelinton() async {
+    debugPrint('INICIOU ATUALIZAR COORDENADAS');
+
+    final geo = await GeocodingService(apiKey: AppSecrets.googleMapsApiKey)
+        .buscarCoordenadas(
+          rua: 'petronio portela',
+          numero: '27',
+          cidade: 'Franco da Rocha',
+          estado: 'SP',
+        );
+
+    if (geo == null) {
+      debugPrint('Não foi possível localizar endereço');
+      return;
+    }
+
+    debugPrint('LAT: ${geo.latitude}');
+    debugPrint('LNG: ${geo.longitude}');
+
+    await _supabase
+        .from('tecnicos')
+        .update({
+          'latitude_residencia': geo.latitude,
+          'longitude_residencia': geo.longitude,
+        })
+        .eq('id', '9eb689e4-5f74-4c9a-8e11-1d915cfb1bc8');
   }
 
   // =========================
@@ -186,11 +245,10 @@ class TecnicoController {
     loading.value = true;
     error.value = null;
 
+    
+
     try {
-      await _supabase.auth.signInWithPassword(
-        email: email,
-        password: senha,
-      );
+      await _supabase.auth.signInWithPassword(email: email, password: senha);
 
       success.value = true;
     } catch (e) {
@@ -213,4 +271,5 @@ class TecnicoController {
     error.dispose();
     success.dispose();
   }
+
 }

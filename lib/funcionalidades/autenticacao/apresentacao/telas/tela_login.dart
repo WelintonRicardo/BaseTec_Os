@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // Controle e Telas
 import '../../controle/login_cubit.dart';
 import '../widgets/input_login_widget.dart';
-import '../../../cadastro/apresentacao/telas/tela_cadastro.dart';
+import '../../../empresas/apresentacao/telas/tela_cadastro_empresas.dart';
 
 // Compartilhado
 import '../../../../compartilhado/tema_cores.dart';
@@ -277,7 +277,7 @@ class _TelaLoginState extends State<TelaLogin> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const TelaCadastroOS(),
+                        builder: (context) => const TelaCadastroEmpresa(),
                       ),
                     );
                   },

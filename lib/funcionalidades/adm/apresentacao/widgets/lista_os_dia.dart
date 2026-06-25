@@ -7,7 +7,6 @@ import 'chip_status.dart';
 import 'format_hora.dart';
 import 'package:flutter/services.dart';
 import '../../../../compartilhado/pdf/servicos/servico_compartilhamento_os.dart';
-import '../../../ordens_servico/apresentacao/telas/tela_adm_detalhes_os.dart';
 
 Widget buildListaOSDia(
   List<Map<String, dynamic>> ordensServico,
@@ -209,14 +208,7 @@ Widget buildListaOSDia(
                             if (!context.mounted) return;
 
                             Navigator.of(context, rootNavigator: true).pop();
-                            Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => TelaAdmDetalhesOS(
-      os: os,
-    ),
-  ),
-);
+                        
                             showDialog(
                               context: context,
                               builder: (_) {

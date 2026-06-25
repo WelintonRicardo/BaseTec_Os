@@ -8,6 +8,7 @@ import '../../controle/tecnico_controller.dart';
 import 'tecnico_header_card.dart';
 import 'tecnico_agenda_card.dart';
 import 'tecnico_os_card.dart';
+import '../widgets/tecnico_resumo_rota_card.dart';
 
 /// ======================================================
 /// TELA PRINCIPAL DO TÉCNICO
@@ -128,7 +129,28 @@ class _TelaTecnicoBody extends StatelessWidget {
               ///
               const TecnicoHeaderCard(),
 
+              
+
               const SizedBox(height: 20),
+
+              const SizedBox(height: 20),
+
+TecnicoResumoRotaCard(
+  totalAtendimentos:
+      controller.totalAtendimentosDia,
+
+  minutosEstimados:
+      controller.minutosEstimadosDia +
+      controller.tempoDeslocamentoDia,
+
+  kmEstimados:
+      controller.kmEstimadosDia,
+
+  rotaOtimizada:
+      controller.rotaOtimizada,
+),
+
+const SizedBox(height: 20),
 
               /// ==================================
               /// CALENDÁRIO / AGENDA

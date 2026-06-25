@@ -5,7 +5,6 @@ import '../../../../compartilhado/tema_cores.dart';
 import 'tecnico_os_detalhes.dart';
 
 class TecnicoOSCard extends StatelessWidget {
-
   final DateTime selectedDate;
 
   final List<Map<String, dynamic>> osList;
@@ -17,35 +16,25 @@ class TecnicoOSCard extends StatelessWidget {
   });
 
   String formatarHorario(dynamic data) {
-
     if (data == null) {
       return '--:--';
     }
 
     try {
+      final dt = DateTime.parse(data.toString());
 
-      final dt = DateTime.parse(
-        data.toString(),
-      );
+      final hora = dt.hour.toString().padLeft(2, '0');
 
-      final hora =
-          dt.hour.toString().padLeft(2, '0');
-
-      final minuto =
-          dt.minute.toString().padLeft(2, '0');
+      final minuto = dt.minute.toString().padLeft(2, '0');
 
       return '$hora:$minuto';
-
     } catch (e) {
-
       return '--:--';
     }
   }
 
   Color corStatus(String status) {
-
     switch (status.toLowerCase()) {
-
       case 'concluído':
       case 'concluido':
         return AppCores.concluido;
@@ -67,18 +56,11 @@ class TecnicoOSCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-
-
     if (osList.isEmpty) {
-
       return Card(
-
         color: AppCores.cardEscuro,
 
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
 
         child: const Padding(
           padding: EdgeInsets.all(20),
@@ -87,9 +69,7 @@ class TecnicoOSCard extends StatelessWidget {
             child: Text(
               "Nenhuma ordem de serviço encontrada",
 
-              style: TextStyle(
-                color: AppCores.textoCinza,
-              ),
+              style: TextStyle(color: AppCores.textoCinza),
             ),
           ),
         ),
@@ -97,125 +77,80 @@ class TecnicoOSCard extends StatelessWidget {
     }
 
     final osFiltradas = osList.where((os) {
-
-      final dataIso =
-          os['janela_inicio_agendada'];
+      final dataIso = os['janela_inicio_agendada'];
 
       if (dataIso == null) {
         return false;
       }
 
       try {
-
-        final dt = DateTime.parse(
-          dataIso.toString(),
-        );
+        final dt = DateTime.parse(dataIso.toString());
 
         return dt.year == selectedDate.year &&
             dt.month == selectedDate.month &&
             dt.day == selectedDate.day;
-
       } catch (e) {
-
         return false;
       }
     }).toList();
 
     return Column(
-
       children: osFiltradas.map((os) {
+        final numeroOS = os['numero_os']?.toString() ?? '---';
 
+        final segurado = os['nome_segurado']?.toString() ?? 'Sem segurado';
 
-        final numeroOS =
-            os['numero_os']
-                ?.toString() ??
-            '---';
-
-        final segurado =
-            os['nome_segurado']
-                ?.toString() ??
-            'Sem segurado';
-
-        final status =
-            os['status']
-                ?.toString() ??
-            'Sem status';
+        final status = os['status']?.toString() ?? 'Sem status';
 
         final endereco =
-            os['endereco']
-                ?.toString() ??
-
-            os['rua']
-                ?.toString() ??
-
+            os['endereco']?.toString() ??
+            os['rua']?.toString() ??
             'Sem endereço';
 
-        final inicio =
-            formatarHorario(
-          os['janela_inicio_agendada'],
-        );
+        final inicio = formatarHorario(os['janela_inicio_agendada']);
 
-        final fim =
-            formatarHorario(
-          os['janela_fim_agendada'],
-        );
+        final fim = formatarHorario(os['janela_fim_agendada']);
 
-        final cidade =
-          os['cidade']
-              ?.toString() ??
-          'Sem cidade';
+        final cidade = os['cidade']?.toString() ?? 'Sem cidade';
 
         final descricaoServico =
-            os['descricao_servico']
-                ?.toString() ??
-            'Sem descrição';
+            os['descricao_servico']?.toString() ?? 'Sem descrição';
+        final ordemRota = os['ordem_rota'] ?? 0;
 
+        final kmTrecho = (os['km_trecho'] ?? 0).toDouble();
+
+        final kmAcumulado = (os['km_acumulado'] ?? 0).toDouble();
+
+        final minutosTrecho = os['minutos_trecho'] ?? 0;
         return GestureDetector(
-
           onTap: () {
-
-
             Navigator.push(
               context,
 
-              MaterialPageRoute(
-                builder: (_) =>
-                    TecnicoOSDetalhes(
-                  os: os,
-                ),
-              ),
+              MaterialPageRoute(builder: (_) => TecnicoOSDetalhes(os: os)),
             );
           },
 
           child: Container(
-
-            margin: const EdgeInsets.only(
-              bottom: 14,
-            ),
+            margin: const EdgeInsets.only(bottom: 14),
 
             padding: const EdgeInsets.all(14),
 
             decoration: BoxDecoration(
               color: AppCores.cardEscuro,
 
-              borderRadius:
-                  BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(18),
             ),
 
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
-
                 // HEADER
                 Row(
                   children: [
-
                     CircleAvatar(
-                      backgroundColor:
-                          AppCores.primaria
-                              .withOpacity(0.2),
+                      backgroundColor: AppCores.primaria.withOpacity(0.2),
 
                       child: const Icon(
                         Icons.assignment_rounded,
@@ -228,20 +163,16 @@ class TecnicoOSCard extends StatelessWidget {
 
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
-
                           Text(
                             "OS: $numeroOS",
 
                             style: const TextStyle(
-                              color:
-                                  AppCores.textoBranco,
+                              color: AppCores.textoBranco,
 
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
 
                               fontSize: 14,
                             ),
@@ -250,31 +181,22 @@ class TecnicoOSCard extends StatelessWidget {
                           Text(
                             segurado,
 
-                            style: const TextStyle(
-                              color:
-                                  AppCores.textoCinza,
-                            ),
+                            style: const TextStyle(color: AppCores.textoCinza),
                           ),
                         ],
                       ),
                     ),
 
                     Container(
-
-                      padding:
-                          const EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
 
                       decoration: BoxDecoration(
+                        color: corStatus(status).withOpacity(0.15),
 
-                        color:
-                            corStatus(status)
-                                .withOpacity(0.15),
-
-                        borderRadius:
-                            BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(30),
                       ),
 
                       child: Text(
@@ -283,8 +205,7 @@ class TecnicoOSCard extends StatelessWidget {
                         style: TextStyle(
                           color: corStatus(status),
 
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
 
                           fontSize: 12,
                         ),
@@ -298,7 +219,6 @@ class TecnicoOSCard extends StatelessWidget {
                 // ENDEREÇO
                 Row(
                   children: [
-
                     const Icon(
                       Icons.location_on_outlined,
 
@@ -313,10 +233,7 @@ class TecnicoOSCard extends StatelessWidget {
                       child: Text(
                         endereco,
 
-                        style: const TextStyle(
-                          color:
-                              AppCores.textoCinza,
-                        ),
+                        style: const TextStyle(color: AppCores.textoCinza),
                       ),
                     ),
                   ],
@@ -324,105 +241,95 @@ class TecnicoOSCard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-// CIDADE
-Row(
-  children: [
+                // CIDADE
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_city,
 
-    const Icon(
-      Icons.location_city,
+                      color: AppCores.textoCinza,
 
-      color: AppCores.textoCinza,
+                      size: 18,
+                    ),
 
-      size: 18,
-    ),
+                    const SizedBox(width: 8),
 
-    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        cidade,
 
-    Expanded(
-      child: Text(
-        cidade,
+                        style: const TextStyle(color: AppCores.textoCinza),
+                      ),
+                    ),
+                  ],
+                ),
 
-        style: const TextStyle(
-          color: AppCores.textoCinza,
-        ),
-      ),
-    ),
-  ],
-),
+                const SizedBox(height: 12),
 
-const SizedBox(height: 12),
+                // DESCRIÇÃO SERVIÇO
+                Container(
+                  width: double.infinity,
 
-// DESCRIÇÃO SERVIÇO
-Container(
+                  padding: const EdgeInsets.all(12),
 
-  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.15),
 
-  padding: const EdgeInsets.all(12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
 
-  decoration: BoxDecoration(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-    color: Colors.black.withOpacity(0.15),
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.build_circle_outlined,
 
-    borderRadius: BorderRadius.circular(12),
-  ),
+                            color: AppCores.primaria,
 
-  child: Column(
-    crossAxisAlignment:
-        CrossAxisAlignment.start,
+                            size: 18,
+                          ),
 
-    children: [
+                          SizedBox(width: 6),
 
-      const Row(
-        children: [
+                          Text(
+                            "Serviço",
 
-          Icon(
-            Icons.build_circle_outlined,
+                            style: TextStyle(
+                              color: AppCores.primaria,
 
-            color: AppCores.primaria,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
 
-            size: 18,
-          ),
+                      SizedBox(height: 8),
 
-          SizedBox(width: 6),
+                      Text(
+                        descricaoServico,
 
-          Text(
-            "Serviço",
+                        maxLines: 3,
 
-            style: TextStyle(
-              color: AppCores.primaria,
+                        overflow: TextOverflow.ellipsis,
 
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
+                        style: const TextStyle(
+                          color: AppCores.textoBranco,
 
-      SizedBox(height: 8),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-      Text(
-
-        descricaoServico,
-
-        maxLines: 3,
-
-        overflow: TextOverflow.ellipsis,
-
-        style: const TextStyle(
-          color: AppCores.textoBranco,
-
-          height: 1.4,
-        ),
-      ),
-    ],
-  ),
-),
-
-const SizedBox(height: 14),
+                const SizedBox(height: 14),
 
                 // HORÁRIO
                 Row(
                   children: [
-
                     const Icon(
                       Icons.access_time,
 
@@ -437,64 +344,101 @@ const SizedBox(height: 14),
                       "$inicio às $fim",
 
                       style: const TextStyle(
-                        color:
-                            AppCores.textoBranco,
+                        color: AppCores.textoBranco,
 
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
 
+                  padding: const EdgeInsets.all(12),
+
+                  decoration: BoxDecoration(
+                    color: AppCores.primaria.withOpacity(0.08),
+
+                    borderRadius: BorderRadius.circular(12),
+
+                    border: Border.all(
+                      color: AppCores.primaria.withOpacity(0.3),
+                    ),
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: [
+                      Text(
+                        '🚩 Parada #$ordemRota',
+
+                        style: const TextStyle(
+                          color: AppCores.primaria,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        '🚗 Trecho: ${kmTrecho.toStringAsFixed(1)} km',
+
+                        style: const TextStyle(color: AppCores.textoBranco),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        '📊 Acumulado: ${kmAcumulado.toStringAsFixed(1)} km',
+
+                        style: const TextStyle(color: AppCores.textoCinza),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        '🕒 Deslocamento: $minutosTrecho min',
+
+                        style: const TextStyle(color: AppCores.textoCinza),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
                 // BOTÕES
                 Row(
                   children: [
-
                     Expanded(
                       child: ElevatedButton.icon(
-
                         onPressed: () {
-
                           Navigator.push(
                             context,
 
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  TecnicoOSDetalhes(
-                                os: os,
-                              ),
+                              builder: (_) => TecnicoOSDetalhes(os: os),
                             ),
                           );
                         },
 
-                        style:
-                            ElevatedButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppCores.primaria,
 
-                          backgroundColor:
-                              AppCores.primaria,
-
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
 
-                        icon: const Icon(
-                          Icons.visibility,
-
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.visibility, color: Colors.white),
 
                         label: const Text(
                           "Detalhes",
 
-                          style: TextStyle(
-                            color: Colors.white,
-                          ),
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
                     ),

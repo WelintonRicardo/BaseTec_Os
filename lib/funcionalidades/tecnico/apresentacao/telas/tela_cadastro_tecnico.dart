@@ -14,18 +14,13 @@ import '../../../../compartilhado/tema_cores.dart';
 class TelaCadastroTecnico extends StatefulWidget {
   final TecnicoController controller;
 
-  const TelaCadastroTecnico({
-    super.key,
-    required this.controller,
-  });
+  const TelaCadastroTecnico({super.key, required this.controller});
 
   @override
-  State<TelaCadastroTecnico> createState() =>
-      _TelaCadastroTecnicoState();
+  State<TelaCadastroTecnico> createState() => _TelaCadastroTecnicoState();
 }
 
-class _TelaCadastroTecnicoState
-    extends State<TelaCadastroTecnico> {
+class _TelaCadastroTecnicoState extends State<TelaCadastroTecnico> {
   final _formKey = GlobalKey<FormState>();
 
   final nomeCtrl = TextEditingController();
@@ -37,6 +32,7 @@ class _TelaCadastroTecnicoState
   final ruaCtrl = TextEditingController();
   final numeroCtrl = TextEditingController();
   final complementoCtrl = TextEditingController();
+  final estadoCtrl = TextEditingController();
 
   @override
   void dispose() {
@@ -51,6 +47,7 @@ class _TelaCadastroTecnicoState
     complementoCtrl.dispose();
 
     widget.controller.dispose();
+    estadoCtrl.dispose();
 
     super.dispose();
   }
@@ -64,6 +61,7 @@ class _TelaCadastroTecnicoState
         cpfRg: cpfCtrl.text.trim(),
         telefone: telefoneCtrl.text.trim(),
         cidade: cidadeCtrl.text.trim(),
+        estado: estadoCtrl.text.trim(),
         rua: ruaCtrl.text.trim(),
         numero: numeroCtrl.text.trim(),
         complemento: complementoCtrl.text.trim(),
@@ -120,17 +118,14 @@ class _TelaCadastroTecnicoState
 
                 borderRadius: BorderRadius.circular(28),
 
-                border: Border.all(
-                  color: AppCores.bordaEscura,
-                ),
+                border: Border.all(color: AppCores.bordaEscura),
               ),
 
               child: Form(
                 key: _formKey,
 
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
                   children: [
                     const HeaderTecnicoWidget(),
@@ -144,9 +139,7 @@ class _TelaCadastroTecnicoState
                           label: "Nome Completo",
                           icon: Icons.person_outline,
                           controller: nomeCtrl,
-                          validator: widget
-                              .controller
-                              .validateRequired,
+                          validator: widget.controller.validateRequired,
                         ),
 
                         const SizedBox(height: 18),
@@ -155,9 +148,7 @@ class _TelaCadastroTecnicoState
                           label: "CPF / RG",
                           icon: Icons.badge_outlined,
                           controller: cpfCtrl,
-                          validator: widget
-                              .controller
-                              .validateRequired,
+                          validator: widget.controller.validateRequired,
                         ),
 
                         const SizedBox(height: 18),
@@ -179,8 +170,7 @@ class _TelaCadastroTecnicoState
                           label: "Email",
                           icon: Icons.email_outlined,
                           controller: emailCtrl,
-                          validator:
-                              widget.controller.validateEmail,
+                          validator: widget.controller.validateEmail,
                         ),
 
                         const SizedBox(height: 18),
@@ -190,9 +180,7 @@ class _TelaCadastroTecnicoState
                           icon: Icons.lock_outline,
                           controller: senhaCtrl,
                           obscure: true,
-                          validator: widget
-                              .controller
-                              .validatePassword,
+                          validator: widget.controller.validatePassword,
                         ),
                       ],
                     ),
@@ -204,12 +192,19 @@ class _TelaCadastroTecnicoState
                       children: [
                         CampoTecnicoWidget(
                           label: "Cidade",
-                          icon:
-                              Icons.location_city_outlined,
+                          icon: Icons.location_city_outlined,
                           controller: cidadeCtrl,
                         ),
 
                         const SizedBox(height: 18),
+
+                        const SizedBox(height: 18),
+
+                        CampoTecnicoWidget(
+                          label: "Estado (UF)",
+                          icon: Icons.map,
+                          controller: estadoCtrl,
+                        ),
 
                         CampoTecnicoWidget(
                           label: "Rua",
@@ -229,8 +224,7 @@ class _TelaCadastroTecnicoState
 
                         CampoTecnicoWidget(
                           label: "Complemento",
-                          icon:
-                              Icons.add_home_outlined,
+                          icon: Icons.add_home_outlined,
                           controller: complementoCtrl,
                         ),
                       ],
@@ -239,8 +233,7 @@ class _TelaCadastroTecnicoState
                     const SizedBox(height: 32),
 
                     ValueListenableBuilder<bool>(
-                      valueListenable:
-                          widget.controller.loading,
+                      valueListenable: widget.controller.loading,
                       builder: (context, loading, _) {
                         return BotaoCadastroTecnico(
                           loading: loading,
@@ -252,22 +245,18 @@ class _TelaCadastroTecnicoState
                     const SizedBox(height: 18),
 
                     ValueListenableBuilder<String?>(
-                      valueListenable:
-                          widget.controller.error,
+                      valueListenable: widget.controller.error,
                       builder: (context, error, _) {
                         if (error == null) {
                           return const SizedBox.shrink();
                         }
 
-                        return MensagemErroWidget(
-                          mensagem: error,
-                        );
+                        return MensagemErroWidget(mensagem: error);
                       },
                     ),
 
                     ValueListenableBuilder<bool>(
-                      valueListenable:
-                          widget.controller.success,
+                      valueListenable: widget.controller.success,
                       builder: (context, success, _) {
                         if (!success) {
                           return const SizedBox.shrink();
